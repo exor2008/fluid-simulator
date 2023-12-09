@@ -1,53 +1,52 @@
 use cudarc::{driver::*, nvrtc::compile_ptx};
-use rand::prelude::*;
-use std::time::Instant;
+
+const ROWS: usize = 100;
+const COLS: usize = 100;
+const SIZE: usize = ROWS * COLS;
 
 fn main() -> Result<(), DriverError> {
     let dev = CudaDevice::new(0)?;
 
-    const PTX_SRC: &str = include_str!("sin.cu");
+    const PTX_SRC: &str = include_str!("fluid.cu");
 
     let ptx = compile_ptx(PTX_SRC).unwrap();
 
-    dev.load_ptx(ptx, "sin", &["sin_kernel"])?;
+    dev.load_ptx(ptx, "fluid", &["divergence"])?;
 
-    let f = dev.get_func("sin", "sin_kernel").unwrap();
+    let divergence = dev.get_func("fluid", "divergence").unwrap();
 
-    let mut a_host = vec![0f32; 360_000_000];
-    let mut rng = rand::thread_rng();
-    for i in 0..a_host.len() {
-        a_host[i] = rng.gen();
+    let mut u_host = vec![0f32; SIZE];
+    let v_host = vec![0f32; SIZE];
+    let div_host = vec![0f32; SIZE];
+
+    for y in 0..ROWS {
+        for x in 0..COLS {
+            if x == 5 {
+                u_host[y * COLS + x] = 2.0;
+            }
+        }
     }
 
-    let start_time = Instant::now();
+    let u_dev = dev.htod_copy(u_host.into())?;
+    let v_dev = dev.htod_copy(v_host.into())?;
+    let mut div_dev = dev.htod_copy(div_host.into())?;
 
-    let mut result = vec![0f32; 360_000_000];
-    for i in 0..a_host.len() {
-        result[i] = a_host[i].sin();
+    let cfg = LaunchConfig {
+        grid_dim: (10, 10, 1),
+        block_dim: (10, 10, 1),
+        shared_mem_bytes: 0,
+    };
+
+    unsafe { divergence.launch(cfg, (&mut div_dev, &u_dev, &v_dev, ROWS, COLS)) }?;
+
+    let div_host = dev.sync_reclaim(div_dev)?;
+
+    for y in 0..ROWS {
+        for x in 0..COLS {
+            print!("{}", div_host[y * COLS + x]);
+        }
+        println!();
     }
-    let elapsed_time = start_time.elapsed();
-    println!("CPU: {:?}", elapsed_time);
-
-    let start_time = Instant::now();
-    let a_dev = dev.htod_copy(a_host.into())?;
-    let mut b_dev = a_dev.clone();
-
-    let n = 360_000_000;
-    let cfg = LaunchConfig::for_num_elems(n);
-
-    unsafe { f.launch(cfg, (&mut b_dev, &a_dev, n as i32)) }?;
-
-    let a_host_2 = dev.sync_reclaim(a_dev)?;
-    let b_host = dev.sync_reclaim(b_dev)?;
-
-    let elapsed_time = start_time.elapsed();
-
-    // println!("Found {:?}", b_host);
-    println!("GPU {:?}", elapsed_time);
-    println!("CPU {:?}", result[1000]);
-    println!("GPU {:?}", b_host[1000]);
-    // println!("Expected {:?}", a_host.map(f32::sin));
-    // assert_eq!(result, b_host);
 
     Ok(())
 }
