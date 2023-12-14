@@ -18,7 +18,9 @@ let renderer,
   cmtextures,
   voxelData,
   texture,
-  size;
+  sizeX,
+  sizeY,
+  sizeZ;
 
 function init() {
   scene = new THREE.Scene();
@@ -92,12 +94,11 @@ function initGui() {
   gui.add(volconfig, "isothreshold", 0, 1, 0.01).onChange(updateUniforms);
 }
 function initVoxelData() {
-  size = 256;
-  voxelData = new Float32Array(size * size * size);
+  voxelData = new Float32Array(sizeX * sizeY * sizeZ);
 }
 
 function initTexture() {
-  texture = new THREE.Data3DTexture(voxelData, size, size, size);
+  texture = new THREE.Data3DTexture(voxelData, sizeX, sizeY, sizeZ);
   texture.format = THREE.RedFormat;
   texture.type = THREE.FloatType;
   texture.minFilter = texture.magFilter = THREE.LinearFilter;
@@ -117,7 +118,7 @@ function initMaterial() {
   const uniforms = THREE.UniformsUtils.clone(shader.uniforms);
 
   uniforms["u_data"].value = texture;
-  uniforms["u_size"].value.set(size, size, size);
+  uniforms["u_size"].value.set(sizeX, sizeY, sizeZ);
   uniforms["u_clim"].value.set(volconfig.clim1, volconfig.clim2);
   uniforms["u_renderstyle"].value = volconfig.renderstyle == "mip" ? 0 : 1; // 0: MIP, 1: ISO
   uniforms["u_renderthreshold"].value = volconfig.isothreshold; // For ISO renderstyle
@@ -132,8 +133,8 @@ function initMaterial() {
 }
 
 function initMesh() {
-  const geometry = new THREE.BoxGeometry(size, size, size);
-  geometry.translate(size / 2 - 0.5, size / 2 - 0.5, size / 2 - 0.5);
+  const geometry = new THREE.BoxGeometry(sizeX, sizeY, sizeZ);
+  geometry.translate(sizeX / 2 - 0.5, sizeY / 2 - 0.5, sizeZ / 2 - 0.5);
 
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
@@ -172,7 +173,7 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-async function fetchData() {
+async function streamVoxelData() {
   // TODO: deal with uncontrolled getReader
   try {
     const response = await fetch("http://127.0.0.1:8000/fluid/stream", {
@@ -185,7 +186,7 @@ async function fetchData() {
 
     while (true) {
       let totalBytesRead = 0;
-      let volumeSize = size * size * size * Float32Array.BYTES_PER_ELEMENT;
+      let volumeSize = sizeX * sizeY * sizeZ * Float32Array.BYTES_PER_ELEMENT;
       let chunk = new Uint8Array(volumeSize);
 
       while (totalBytesRead < volumeSize) {
@@ -215,5 +216,20 @@ async function fetchData() {
   }
 }
 
-init();
-fetchData();
+async function fetchSize() {
+  fetch("http://127.0.0.1:8000/size")
+    .then((response) => response.json())
+    .then((size) => {
+      sizeX = size.x;
+      sizeY = size.y;
+      sizeZ = size.z;
+
+      init();
+      streamVoxelData();
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
+}
+
+fetchSize();
