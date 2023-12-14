@@ -1,0 +1,6 @@
+[global.limits]
+bytes = 10_000_000
+data-form = 10_000_000
+file = 10_000_000
+msgpack = 10_000_000
+string = 10_000_000

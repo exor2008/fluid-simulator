@@ -1,5 +1,5 @@
 use cudarc::{driver::*, nvrtc::compile_ptx};
-use fluid_simulator::Fluid;
+use simulator::Fluid;
 
 const ROWS: usize = 100;
 const COLS: usize = 100;
@@ -31,15 +31,6 @@ fn main() -> Result<(), DriverError> {
     };
 
     let mut fluid = Fluid::new(dev.clone(), ROWS, COLS).unwrap();
-    fluid.step(dev.clone(), cfg, DT)?;
-    let result = fluid.smoke(dev.clone())?;
-
-    for y in 0..ROWS {
-        for x in 0..COLS {
-            print!("{}", result[y * COLS + x]);
-        }
-        println!();
-    }
 
     fluid.step(dev.clone(), cfg, DT)?;
     let result = fluid.smoke(dev.clone())?;

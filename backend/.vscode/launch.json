@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'fluid-simulator'",
+            "name": "Debug executable 'backend'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=fluid-simulator",
-                    "--package=fluid-simulator"
+                    "--bin=backend",
+                    "--package=backend"
                 ],
                 "filter": {
-                    "name": "fluid-simulator",
+                    "name": "backend",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'fluid-simulator'",
+            "name": "Debug unit tests in executable 'backend'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=fluid-simulator",
-                    "--package=fluid-simulator"
+                    "--bin=backend",
+                    "--package=backend"
                 ],
                 "filter": {
-                    "name": "fluid-simulator",
+                    "name": "backend",
                     "kind": "bin"
                 }
             },

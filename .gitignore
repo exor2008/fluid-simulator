@@ -1,1 +1,4 @@
-/target
+backend/target
+backend/static/
+simulator/target
+frontend/node_modules
