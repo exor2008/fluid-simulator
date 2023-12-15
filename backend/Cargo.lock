@@ -86,6 +86,7 @@ version = "0.1.0"
 dependencies = [
  "rand",
  "rocket",
+ "simulator",
 ]
 
 [[package]]
@@ -158,6 +159,12 @@ dependencies = [
  "time",
  "version_check",
 ]
+
+[[package]]
+name = "cudarc"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9395df0cab995685664e79cc35ad6302bf08fb9c5d82301875a183affe1278b1"
 
 [[package]]
 name = "deranged"
@@ -1024,6 +1031,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "simulator"
+version = "0.1.0"
+dependencies = [
+ "cudarc",
+ "rand",
 ]
 
 [[package]]

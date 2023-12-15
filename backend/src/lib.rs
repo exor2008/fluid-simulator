@@ -3,14 +3,16 @@ use rocket::serde::{json::Json, Serialize};
 use rocket::tokio::select;
 use rocket::tokio::time::{self, Duration};
 use rocket::Shutdown;
+use simulator::LaunchConfig;
+use simulator::{get_device, get_fluid};
 use std::mem::{self, transmute};
 use std::vec;
 
 #[macro_use]
 extern crate rocket;
-const X: usize = 256;
-const Y: usize = 64;
-const Z: usize = 64;
+const X: usize = 100;
+const Y: usize = 100;
+const Z: usize = 1;
 const SIZE: usize = X * Y * Z;
 
 #[derive(Serialize)]
@@ -29,20 +31,25 @@ pub fn get_size() -> Json<Size> {
 
 #[get("/fluid/stream")]
 pub fn stream(mut shutdown: Shutdown) -> ByteStream![Vec<u8>] {
-    let mut interval = time::interval(Duration::from_micros(1));
+    let mut interval = time::interval(Duration::from_millis(100));
+
+    let dev = get_device(0).unwrap();
+
+    let mut fluid = get_fluid(dev.clone(), X, Y).unwrap();
+
+    let cfg = LaunchConfig {
+        grid_dim: (10, 10, 1),
+        block_dim: (10, 10, 1),
+        shared_mem_bytes: 0,
+    };
 
     ByteStream! {
         loop {
-            let random_values: Vec<f32> = (0..SIZE).map(|_| rand::random()).collect();
+            fluid.step(dev.clone(), cfg, 0.01).unwrap();
+            let result = fluid.smoke(dev.clone()).unwrap();
             select! {
                 _ = interval.tick() => {
-                    let bytes: Vec<u8> = unsafe {
-                        let float_ptr: *const f32 = random_values.as_ptr();
-                        let byte_ptr: *const u8 = transmute(float_ptr);
-                        let byte_slice: &[u8] =
-                            std::slice::from_raw_parts(byte_ptr, random_values.len() * mem::size_of::<f32>());
-                        byte_slice.to_vec()
-                    };
+                    let bytes: Vec<u8> = vec_to_bytes(result);
                     yield bytes;
                     interval.tick().await;
                 }
@@ -53,4 +60,14 @@ pub fn stream(mut shutdown: Shutdown) -> ByteStream![Vec<u8>] {
             }
         }
     }
+}
+
+fn vec_to_bytes<T>(vec: Vec<T>) -> Vec<u8> {
+    return unsafe {
+        let float_ptr: *const T = vec.as_ptr();
+        let byte_ptr: *const u8 = transmute(float_ptr);
+        let byte_slice: &[u8] =
+            std::slice::from_raw_parts(byte_ptr, vec.len() * mem::size_of::<T>());
+        byte_slice.to_vec()
+    };
 }

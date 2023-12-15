@@ -1,36 +1,19 @@
-use cudarc::{driver::*, nvrtc::compile_ptx};
-use simulator::Fluid;
+use cudarc::driver::*;
+use simulator::{get_device, get_fluid};
 
 const ROWS: usize = 100;
 const COLS: usize = 100;
 const DT: f32 = 0.01;
 
 fn main() -> Result<(), DriverError> {
-    let dev = CudaDevice::new(0)?;
-
-    const PTX_SRC: &str = include_str!("fluid.cu");
-
-    let ptx = compile_ptx(PTX_SRC).unwrap();
-
-    dev.load_ptx(
-        ptx,
-        "fluid",
-        &[
-            "divergence",
-            "pressure",
-            "incompress",
-            "advect_velocity",
-            "advect_smoke",
-        ],
-    )?;
+    let dev = get_device(0)?;
+    let mut fluid = get_fluid(dev.clone(), ROWS, COLS)?;
 
     let cfg = LaunchConfig {
         grid_dim: (10, 10, 1),
         block_dim: (10, 10, 1),
         shared_mem_bytes: 0,
     };
-
-    let mut fluid = Fluid::new(dev.clone(), ROWS, COLS).unwrap();
 
     fluid.step(dev.clone(), cfg, DT)?;
     let result = fluid.smoke(dev.clone())?;

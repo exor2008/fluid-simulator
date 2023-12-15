@@ -1,4 +1,4 @@
-use cudarc::driver::*;
+pub use cudarc::{driver::*, nvrtc::compile_ptx};
 use std::{mem::swap, sync::Arc};
 
 const ITERATIONS: usize = 40;
@@ -32,8 +32,8 @@ impl Fluid {
         let pressure_a_host = vec![0f32; size];
         let pressure_b_host = vec![0f32; size];
 
-        for y in 0..rows {
-            for x in 0..cols {
+        for y in 1..rows - 1 {
+            for x in 1..cols - 1 {
                 if x == 5 {
                     u_host[y * cols + x] = 2.0;
                     smoke_host[y * cols + x] = 1.0;
@@ -167,4 +167,28 @@ impl Fluid {
 
         Ok(result)
     }
+}
+
+pub fn get_device(ordinal: usize) -> Result<Arc<CudaDevice>, DriverError> {
+    CudaDevice::new(ordinal)
+}
+
+pub fn get_fluid(dev: Arc<CudaDevice>, rows: usize, cols: usize) -> Result<Fluid, DriverError> {
+    const PTX_SRC: &str = include_str!("fluid.cu");
+
+    let ptx = compile_ptx(PTX_SRC).unwrap();
+
+    dev.load_ptx(
+        ptx,
+        "fluid",
+        &[
+            "divergence",
+            "pressure",
+            "incompress",
+            "advect_velocity",
+            "advect_smoke",
+        ],
+    )?;
+
+    Fluid::new(dev.clone(), rows, cols)
 }

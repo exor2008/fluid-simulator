@@ -186,30 +186,49 @@ async function streamVoxelData() {
 
     while (true) {
       let totalBytesRead = 0;
-      let volumeSize = sizeX * sizeY * sizeZ * Float32Array.BYTES_PER_ELEMENT;
-      let chunk = new Uint8Array(volumeSize);
+      let chunkSize = sizeX * sizeY * sizeZ * Float32Array.BYTES_PER_ELEMENT;
+      let chunk = new Uint8Array(chunkSize);
 
-      while (totalBytesRead < volumeSize) {
+      while (totalBytesRead < chunkSize) {
         let { done, value } = await reader.read();
 
         if (done) {
           return;
         }
 
-        if (value.byteLength > volumeSize) {
-          // Trim the array to the desired size
-          value = value.subarray(0, volumeSize);
-          console.log("trimmed", value.byteLength);
+        if (value.byteLength + totalBytesRead < chunkSize) {
+          chunk.set(value, totalBytesRead);
+          totalBytesRead += value.byteLength;
+          continue;
         }
 
-        chunk.set(value, totalBytesRead);
+        if (value.byteLength + totalBytesRead == chunkSize) {
+          chunk.set(value, totalBytesRead);
+          voxelData = new Float32Array(chunk.buffer);
+          requestAnimationFrame(animate);
+          break;
+        }
 
-        totalBytesRead += value.byteLength;
+        while (value.byteLength + totalBytesRead > chunkSize) {
+          let toSend;
+          if (totalBytesRead > 0) {
+            toSend = value.subarray(0, chunkSize - totalBytesRead);
+            value = value.subarray(
+              chunkSize - totalBytesRead,
+              value.byteLength
+            );
+            chunk.set(toSend, totalBytesRead);
+            totalBytesRead = 0;
+          } else {
+            toSend = value.subarray(0, chunkSize);
+            value = value.subarray(chunkSize, value.byteLength);
+            chunk.set(toSend, 0);
+          }
+          voxelData = new Float32Array(chunk.buffer);
+          requestAnimationFrame(animate);
+        }
+        totalBytesRead = value.byteLength;
       }
-
-      voxelData = new Float32Array(chunk.buffer);
-
-      requestAnimationFrame(animate);
     }
   } catch (error) {
     console.error("Error fetching data:", error);
