@@ -12,7 +12,7 @@ use std::vec;
 extern crate rocket;
 const X: usize = 100;
 const Y: usize = 100;
-const Z: usize = 1;
+const Z: usize = 100;
 const SIZE: usize = X * Y * Z;
 
 #[derive(Serialize)]
@@ -31,15 +31,15 @@ pub fn get_size() -> Json<Size> {
 
 #[get("/fluid/stream")]
 pub fn stream(mut shutdown: Shutdown) -> ByteStream![Vec<u8>] {
-    let mut interval = time::interval(Duration::from_millis(100));
+    let mut interval = time::interval(Duration::from_millis(1));
 
     let dev = get_device(0).unwrap();
 
-    let mut fluid = get_fluid(dev.clone(), X, Y).unwrap();
+    let mut fluid = get_fluid(dev.clone(), X, Y, Z).unwrap();
 
     let cfg = LaunchConfig {
-        grid_dim: (10, 10, 1),
-        block_dim: (10, 10, 1),
+        grid_dim: (10, 10, 10),
+        block_dim: (10, 10, 10),
         shared_mem_bytes: 0,
     };
 

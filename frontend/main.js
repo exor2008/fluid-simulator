@@ -65,8 +65,14 @@ function initCamera() {
     1,
     1000
   );
-  camera.position.set(-64, -64, 128);
+
+  camera.zoom = 3;
   camera.up.set(0, 0, 1); // In our data, z is up
+  camera.position.set(0, 0, 100);
+
+  camera.top -= 65;
+  camera.bottom -= 65;
+
   return camera;
 }
 
@@ -76,7 +82,7 @@ function initCameraControl() {
   controls.addEventListener("change", render);
   controls.target.set(64, 64, 128);
   controls.minZoom = 0.5;
-  controls.maxZoom = 4;
+  controls.maxZoom = 6;
   controls.enablePan = true;
   controls.update();
 }
