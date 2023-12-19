@@ -1,5 +1,9 @@
+#![feature(iter_array_chunks)]
+
 pub use cudarc::{driver::*, nvrtc::compile_ptx};
 use std::{mem::swap, sync::Arc};
+pub mod gltf_reader;
+pub mod raster;
 
 const ITERATIONS: usize = 40;
 const H: f32 = 1.0 / 100.0;
@@ -16,19 +20,22 @@ pub struct Fluid {
     div_dev: CudaSlice<f32>,
     pressure_a_dev: CudaSlice<f32>,
     pressure_b_dev: CudaSlice<f32>,
-    rows: usize,
-    cols: usize,
-    depths: usize,
+    normal_u_dev: CudaSlice<f32>,
+    normal_v_dev: CudaSlice<f32>,
+    normal_w_dev: CudaSlice<f32>,
+    x_size: usize,
+    y_size: usize,
+    z_size: usize,
 }
 
 impl Fluid {
     pub fn new(
         dev: Arc<CudaDevice>,
-        rows: usize,
-        cols: usize,
-        depths: usize,
+        x_size: usize,
+        y_size: usize,
+        z_size: usize,
     ) -> Result<Self, DriverError> {
-        let size = rows * cols * depths;
+        let size = x_size * y_size * z_size;
 
         let u_host = vec![0f32; size];
         let v_host = vec![0f32; size];
@@ -41,6 +48,9 @@ impl Fluid {
         let div_host = vec![0f32; size];
         let pressure_a_host = vec![0f32; size];
         let pressure_b_host = vec![0f32; size];
+        let normal_u_host = vec![0f32; size];
+        let normal_v_host = vec![0f32; size];
+        let normal_w_host = vec![0f32; size];
 
         let u_dev = dev.htod_copy(u_host)?;
         let v_dev = dev.htod_copy(v_host)?;
@@ -53,6 +63,9 @@ impl Fluid {
         let div_dev = dev.htod_copy(div_host)?;
         let pressure_a_dev = dev.htod_copy(pressure_a_host)?;
         let pressure_b_dev = dev.htod_copy(pressure_b_host)?;
+        let normal_u_dev = dev.htod_copy(normal_u_host)?;
+        let normal_v_dev = dev.htod_copy(normal_v_host)?;
+        let normal_w_dev = dev.htod_copy(normal_w_host)?;
 
         let fluid = Fluid {
             u_dev,
@@ -66,9 +79,12 @@ impl Fluid {
             div_dev,
             pressure_a_dev,
             pressure_b_dev,
-            rows,
-            cols,
-            depths,
+            normal_u_dev,
+            normal_v_dev,
+            normal_w_dev,
+            x_size,
+            y_size,
+            z_size,
         };
 
         Ok(fluid)
@@ -89,9 +105,9 @@ impl Fluid {
                     &mut self.u_dev,
                     &mut self.w_dev,
                     &mut self.smoke_dev,
-                    self.rows,
-                    self.cols,
-                    self.depths,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
                 ),
             )?;
             dev.synchronize()?;
@@ -105,9 +121,9 @@ impl Fluid {
                     &self.u_dev,
                     &self.v_dev,
                     &self.w_dev,
-                    self.rows,
-                    self.cols,
-                    self.depths,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
                 ),
             )?;
             dev.synchronize()?;
@@ -122,9 +138,9 @@ impl Fluid {
                         &mut self.pressure_a_dev,
                         &mut self.pressure_b_dev,
                         &self.div_dev,
-                        self.rows,
-                        self.cols,
-                        self.depths,
+                        self.x_size,
+                        self.y_size,
+                        self.z_size,
                     ),
                 )?;
                 dev.synchronize()?;
@@ -141,9 +157,9 @@ impl Fluid {
                     &mut self.v_dev,
                     &mut self.w_dev,
                     &self.pressure_a_dev,
-                    self.rows,
-                    self.cols,
-                    self.depths,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
                 ),
             )?;
             dev.synchronize()?;
@@ -162,9 +178,9 @@ impl Fluid {
                     &self.smoke_dev,
                     dt,
                     H,
-                    self.rows,
-                    self.cols,
-                    self.depths,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
                 ),
             )?;
             swap(&mut self.u_dev, &mut self.new_u_dev);
@@ -184,9 +200,9 @@ impl Fluid {
                     &self.w_dev,
                     dt,
                     H,
-                    self.rows,
-                    self.cols,
-                    self.depths,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
                 ),
             )?;
             swap(&mut self.smoke_dev, &mut self.new_smoke_dev);
@@ -196,6 +212,12 @@ impl Fluid {
 
     pub fn smoke(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
         let result = dev.sync_reclaim(self.smoke_dev.clone())?;
+        // let mut result = dev.sync_reclaim(self.normal_u_dev.clone())?;
+
+        // for r in result.iter_mut() {
+        //     *r += 1.0;
+        //     *r /= 2.0;
+        // }
 
         Ok(result)
     }
@@ -207,9 +229,9 @@ pub fn get_device(ordinal: usize) -> Result<Arc<CudaDevice>, DriverError> {
 
 pub fn get_fluid(
     dev: Arc<CudaDevice>,
-    rows: usize,
-    cols: usize,
-    depths: usize,
+    x_size: usize,
+    y_size: usize,
+    z_size: usize,
 ) -> Result<Fluid, DriverError> {
     const PTX_SRC: &str = include_str!("fluid.cu");
 
@@ -228,5 +250,9 @@ pub fn get_fluid(
         ],
     )?;
 
-    Fluid::new(dev.clone(), rows, cols, depths)
+    // Fluid::new(dev.clone(), x_size, y_size, z_size)
+
+    let bin = include_bytes!("D:/code/fluid-simulator/scene.glb");
+    let (doc, buffers, _) = gltf::import_slice(bin).unwrap();
+    Fluid::from_gltf(dev.clone(), x_size, y_size, z_size, doc, buffers)
 }

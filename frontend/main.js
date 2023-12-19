@@ -63,15 +63,15 @@ function initCamera() {
     h / 2,
     -h / 2,
     1,
-    1000
+    5000
   );
 
-  camera.zoom = 3;
+  // camera.zoom = 3;
   camera.up.set(0, 0, 1); // In our data, z is up
   camera.position.set(0, 0, 100);
 
-  camera.top -= 65;
-  camera.bottom -= 65;
+  // camera.top -= 65;
+  // camera.bottom -= 65;
 
   return camera;
 }
@@ -80,7 +80,7 @@ function initCameraControl() {
   // Create controls
   controls = new OrbitControls(camera, renderer.domElement);
   controls.addEventListener("change", render);
-  controls.target.set(64, 64, 128);
+  controls.target.set(0, 0, 0);
   controls.minZoom = 0.5;
   controls.maxZoom = 6;
   controls.enablePan = true;
