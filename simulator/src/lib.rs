@@ -6,7 +6,6 @@ pub mod gltf_reader;
 pub mod raster;
 
 const ITERATIONS: usize = 40;
-const H: f32 = 1.0 / 100.0;
 
 pub struct Fluid {
     u_dev: CudaSlice<f32>,
@@ -23,6 +22,7 @@ pub struct Fluid {
     normal_u_dev: CudaSlice<f32>,
     normal_v_dev: CudaSlice<f32>,
     normal_w_dev: CudaSlice<f32>,
+    block_dev: CudaSlice<bool>,
     x_size: usize,
     y_size: usize,
     z_size: usize,
@@ -51,6 +51,7 @@ impl Fluid {
         let normal_u_host = vec![0f32; size];
         let normal_v_host = vec![0f32; size];
         let normal_w_host = vec![0f32; size];
+        let block_host = vec![false; size];
 
         let u_dev = dev.htod_copy(u_host)?;
         let v_dev = dev.htod_copy(v_host)?;
@@ -66,6 +67,7 @@ impl Fluid {
         let normal_u_dev = dev.htod_copy(normal_u_host)?;
         let normal_v_dev = dev.htod_copy(normal_v_host)?;
         let normal_w_dev = dev.htod_copy(normal_w_host)?;
+        let block_dev = dev.htod_copy(block_host)?;
 
         let fluid = Fluid {
             u_dev,
@@ -82,6 +84,7 @@ impl Fluid {
             normal_u_dev,
             normal_v_dev,
             normal_w_dev,
+            block_dev,
             x_size,
             y_size,
             z_size,
@@ -105,6 +108,7 @@ impl Fluid {
                     &mut self.u_dev,
                     &mut self.w_dev,
                     &mut self.smoke_dev,
+                    &self.block_dev,
                     self.x_size,
                     self.y_size,
                     self.z_size,
@@ -121,6 +125,7 @@ impl Fluid {
                     &self.u_dev,
                     &self.v_dev,
                     &self.w_dev,
+                    &self.block_dev,
                     self.x_size,
                     self.y_size,
                     self.z_size,
@@ -138,6 +143,7 @@ impl Fluid {
                         &mut self.pressure_a_dev,
                         &mut self.pressure_b_dev,
                         &self.div_dev,
+                        &self.block_dev,
                         self.x_size,
                         self.y_size,
                         self.z_size,
@@ -157,6 +163,7 @@ impl Fluid {
                     &mut self.v_dev,
                     &mut self.w_dev,
                     &self.pressure_a_dev,
+                    &self.block_dev,
                     self.x_size,
                     self.y_size,
                     self.z_size,
@@ -176,8 +183,8 @@ impl Fluid {
                     &mut self.new_v_dev,
                     &mut self.new_w_dev,
                     &self.smoke_dev,
+                    &self.block_dev,
                     dt,
-                    H,
                     self.x_size,
                     self.y_size,
                     self.z_size,
@@ -186,6 +193,25 @@ impl Fluid {
             swap(&mut self.u_dev, &mut self.new_u_dev);
             swap(&mut self.v_dev, &mut self.new_v_dev);
             swap(&mut self.w_dev, &mut self.new_w_dev);
+            dev.synchronize()?;
+
+            // Calculate borders collisions
+            let calc_borders = dev.get_func("fluid", "calc_borders").unwrap();
+            calc_borders.launch(
+                cfg,
+                (
+                    &mut self.u_dev,
+                    &mut self.v_dev,
+                    &mut self.w_dev,
+                    &self.normal_u_dev,
+                    &self.normal_v_dev,
+                    &self.normal_w_dev,
+                    &self.block_dev,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
+                ),
+            )?;
             dev.synchronize()?;
 
             // Advect smoke
@@ -198,8 +224,8 @@ impl Fluid {
                     &self.u_dev,
                     &self.v_dev,
                     &self.w_dev,
+                    &self.block_dev,
                     dt,
-                    H,
                     self.x_size,
                     self.y_size,
                     self.z_size,
@@ -211,8 +237,12 @@ impl Fluid {
     }
 
     pub fn smoke(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
+        // let result = dev.sync_reclaim(self.block_dev.clone())?;
+        // let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();
+
         let result = dev.sync_reclaim(self.smoke_dev.clone())?;
-        // let mut result = dev.sync_reclaim(self.normal_u_dev.clone())?;
+
+        // let result = dev.sync_reclaim(self.u_dev.clone())?;
 
         // for r in result.iter_mut() {
         //     *r += 1.0;
@@ -245,6 +275,7 @@ pub fn get_fluid(
             "pressure",
             "incompress",
             "advect_velocity",
+            "calc_borders",
             "advect_smoke",
             "constant",
         ],

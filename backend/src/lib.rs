@@ -11,8 +11,8 @@ use std::vec;
 #[macro_use]
 extern crate rocket;
 const X: usize = 140;
-const Y: usize = 80;
-const Z: usize = 40;
+const Y: usize = 100;
+const Z: usize = 80;
 const SIZE: usize = X * Y * Z;
 
 #[derive(Serialize)]

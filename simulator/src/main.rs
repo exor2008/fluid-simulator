@@ -2,8 +2,8 @@ use cudarc::driver::*;
 use simulator::{get_device, get_fluid};
 
 const X_SIZE: usize = 140;
-const Y_SIZE: usize = 80;
-const Z_SIZE: usize = 40;
+const Y_SIZE: usize = 100;
+const Z_SIZE: usize = 80;
 const DT: f32 = 0.01;
 
 fn main() -> Result<(), DriverError> {
@@ -11,7 +11,7 @@ fn main() -> Result<(), DriverError> {
     let mut fluid = get_fluid(dev.clone(), X_SIZE, Y_SIZE, Z_SIZE)?;
 
     let cfg = LaunchConfig {
-        grid_dim: (14, 10, 10),
+        grid_dim: (14, 10, 8),
         block_dim: (10, 10, 10),
         shared_mem_bytes: 0,
     };

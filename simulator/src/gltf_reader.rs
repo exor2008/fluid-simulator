@@ -30,12 +30,13 @@ impl Fluid {
         let mut normal_u_host = vec![0f32; size];
         let mut normal_v_host = vec![0f32; size];
         let mut normal_w_host = vec![0f32; size];
+        let mut block_host = vec![false; size];
 
         // normal_u_host[(0 + 10 * 80) * 140 + 100] = -1.0;
 
         for node in doc.nodes() {
             // for mesh in doc.meshes() {
-            let (origin, rotation, scale) = node.transform().decomposed();
+            let (origin, _rotation, _scale) = node.transform().decomposed();
 
             if let Some(mesh) = node.mesh() {
                 for primitive in mesh.primitives() {
@@ -72,6 +73,50 @@ impl Fluid {
             }
         }
 
+        let mut block;
+
+        for z in 0..z_size {
+            for y in 0..y_size {
+                block = false;
+                for x in 0..x_size {
+                    let idx = (y + y_size * z) * x_size + x;
+                    let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
+                    match normal == 0.0 {
+                        true => block_host[idx] = block,
+                        false => block = !block,
+                    }
+                }
+            }
+        }
+
+        for z in 0..z_size {
+            for x in 0..x_size {
+                block = false;
+                for y in 0..y_size {
+                    let idx = (y + y_size * z) * x_size + x;
+                    let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
+                    match normal == 0.0 {
+                        true => block_host[idx] = block,
+                        false => block = !block,
+                    }
+                }
+            }
+        }
+
+        for x in 0..x_size {
+            for y in 0..y_size {
+                block = false;
+                for z in 0..z_size {
+                    let idx = (y + y_size * z) * x_size + x;
+                    let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
+                    match normal == 0.0 {
+                        true => block_host[idx] = block,
+                        false => block = !block,
+                    }
+                }
+            }
+        }
+
         let u_dev = dev.htod_copy(u_host)?;
         let v_dev = dev.htod_copy(v_host)?;
         let w_dev = dev.htod_copy(w_host)?;
@@ -86,6 +131,7 @@ impl Fluid {
         let normal_u_dev = dev.htod_copy(normal_u_host)?;
         let normal_v_dev = dev.htod_copy(normal_v_host)?;
         let normal_w_dev = dev.htod_copy(normal_w_host)?;
+        let block_dev = dev.htod_copy(block_host)?;
 
         let fluid = Fluid {
             u_dev,
@@ -102,6 +148,7 @@ impl Fluid {
             normal_u_dev,
             normal_v_dev,
             normal_w_dev,
+            block_dev,
             x_size,
             y_size,
             z_size,
