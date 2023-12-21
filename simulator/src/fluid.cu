@@ -2,8 +2,8 @@ __constant__ int U_FEILD = 0;
 __constant__ int V_FEILD = 1;
 __constant__ int W_FEILD = 2;
 __constant__ int S_FEILD = 3;
-__constant__ float FRICTION = 0.8;
-__constant__ float H = 1.0 / 100.0;
+__constant__ float FRICTION = 1.0;
+__constant__ float H = 1.0 / 110.0;
 
 extern "C" __global__ void divergence(
     float *div,
@@ -48,15 +48,30 @@ extern "C" __global__ void pressure(
 
     if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
     {
+        int idx_z_r = (y + y_size * (z + 1)) * x_size + x;
+        int idx_z_l = (y + y_size * (z - 1)) * x_size + x;
+        int idx_y_r = (y + 1 + y_size * z) * x_size + x;
+        int idx_y_l = (y - 1 + y_size * z) * x_size + x;
+        int idx_x_r = (y + y_size * z) * x_size + x + 1;
+        int idx_x_l = (y + y_size * z) * x_size + x - 1;
+
         int idx = (y + y_size * z) * x_size + x;
         if (!block[idx])
         {
-            float sum = (pressure_b[(y + y_size * (z + 1)) * x_size + x] +
-                         pressure_b[(y + y_size * (z - 1)) * x_size + x] +
-                         pressure_b[(y + 1 + y_size * z) * x_size + x] +
-                         pressure_b[(y - 1 + y_size * z) * x_size + x] +
-                         pressure_b[(y + y_size * z) * x_size + x + 1] +
-                         pressure_b[(y + y_size * z) * x_size + x - 1]);
+            float pressure_z_r = block[idx_z_r] ? pressure_b[idx] : pressure_b[idx_z_r];
+            float pressure_z_l = block[idx_z_l] ? pressure_b[idx] : pressure_b[idx_z_l];
+            float pressure_y_r = block[idx_y_r] ? pressure_b[idx] : pressure_b[idx_y_r];
+            float pressure_y_l = block[idx_y_l] ? pressure_b[idx] : pressure_b[idx_y_l];
+            float pressure_x_r = block[idx_x_r] ? pressure_b[idx] : pressure_b[idx_x_r];
+            float pressure_x_l = block[idx_x_l] ? pressure_b[idx] : pressure_b[idx_x_l];
+
+            float sum = pressure_z_r +
+                        pressure_z_l +
+                        pressure_y_r +
+                        pressure_y_l +
+                        pressure_x_r +
+                        pressure_x_l;
+
             pressure_a[idx] = (sum - div[idx]) / 6;
         }
     }
@@ -369,24 +384,6 @@ extern "C" __global__ void advect_smoke(
     }
 }
 
-extern "C" __device__ void flip_vector(
-    float x,
-    float y,
-    float z,
-    float normal_x,
-    float normal_y,
-    float normal_z,
-    float &flipped_x,
-    float &flipped_y,
-    float &flipped_z)
-{
-    float dot = x * normal_x + y * normal_y + z * normal_z;
-
-    flipped_x = x - 2 * dot * normal_x;
-    flipped_y = y - 2 * dot * normal_y;
-    flipped_z = z - 2 * dot * normal_z;
-}
-
 extern "C" __global__ void calc_borders(
     float *u,
     float *v,
@@ -415,11 +412,11 @@ extern "C" __global__ void calc_borders(
         {
             if (normal_u[idx] != 0 || normal_v[idx] != 0 || normal_w[idx] != 0)
             {
-                flip_vector(u[idx], v[idx], w[idx], normal_u[idx], normal_v[idx], normal_w[idx], flipped_x, flipped_y, flipped_z);
+                float dot = u[idx] * normal_u[idx] + v[idx] * normal_v[idx] + w[idx] * normal_w[idx];
 
-                u[idx] = flipped_x * FRICTION;
-                v[idx] = flipped_y * FRICTION;
-                w[idx] = flipped_z * FRICTION;
+                u[idx] = u[idx] - 2 * dot * normal_u[idx];
+                v[idx] = v[idx] - 2 * dot * normal_v[idx];
+                w[idx] = w[idx] - 2 * dot * normal_w[idx];
             }
         }
     }
@@ -427,6 +424,7 @@ extern "C" __global__ void calc_borders(
 
 extern "C" __global__ void constant(
     float *u,
+    float *v,
     float *w,
     float *smoke,
     const bool *block,
@@ -438,14 +436,35 @@ extern "C" __global__ void constant(
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (x >= 20 && x < 30 && y >= 45 && y < y_size - 45 && z >= 35 && z < z_size - 35)
+    if (x >= 40 && x < 50 && y >= 45 && y < y_size - 45 && z >= 35 && z < z_size - 35)
     {
         int idx = (y + y_size * z) * x_size + x;
 
         if (!block[idx])
         {
-            u[idx] = 3.0;
             smoke[idx] = 1.0;
         }
+    }
+
+    if (x >= 2 && x <= 4 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        u[idx] = 3.0;
+    }
+
+    if (x < 2 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        u[idx] = 0;
+    }
+    if (y < 2 && x > 0 && z > 0 && x < x_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        v[idx] = 0;
+    }
+    if (z < 2 && y > 0 && x > 0 && y < y_size - 1 && x < x_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        w[idx] = 0;
     }
 }

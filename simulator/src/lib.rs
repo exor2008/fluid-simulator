@@ -5,7 +5,7 @@ use std::{mem::swap, sync::Arc};
 pub mod gltf_reader;
 pub mod raster;
 
-const ITERATIONS: usize = 40;
+const ITERATIONS: usize = 100;
 
 pub struct Fluid {
     u_dev: CudaSlice<f32>,
@@ -106,6 +106,7 @@ impl Fluid {
                 cfg,
                 (
                     &mut self.u_dev,
+                    &mut self.v_dev,
                     &mut self.w_dev,
                     &mut self.smoke_dev,
                     &self.block_dev,
@@ -242,12 +243,24 @@ impl Fluid {
 
         let result = dev.sync_reclaim(self.smoke_dev.clone())?;
 
-        // let result = dev.sync_reclaim(self.u_dev.clone())?;
+        // let mut result = dev.sync_reclaim(self.u_dev.clone())?;
+        // let mut r = vec![0f32; self.x_size * self.y_size * self.z_size];
+
+        // for z in 0..self.z_size - 1 {
+        //     for y in 0..self.y_size - 1 {
+        //         for x in 0..self.x_size - 1 {
+        //             let idx = (y + self.y_size * z) * self.x_size + x;
+        //             r[idx] = result[idx + 1] - result[idx];
+        //         }
+        //     }
+        // }
 
         // for r in result.iter_mut() {
         //     *r += 1.0;
         //     *r /= 2.0;
         // }
+
+        // let result = dev.sync_reclaim(self.pressure_a_dev.clone())?;
 
         Ok(result)
     }
