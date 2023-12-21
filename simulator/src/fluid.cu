@@ -96,9 +96,18 @@ extern "C" __global__ void incompress(
         int idx = (y + y_size * z) * x_size + x;
         if (!block[idx])
         {
-            float dp_dx = pressure[(y + y_size * z) * x_size + x + 1] - pressure[idx];
-            float dp_dy = pressure[(y + 1 + y_size * z) * x_size + x] - pressure[idx];
-            float dp_dz = pressure[(y + y_size * (z + 1)) * x_size + x] - pressure[idx];
+
+            int idx_x = (y + y_size * z) * x_size + x + 1;
+            int idx_y = (y + 1 + y_size * z) * x_size + x;
+            int idx_z = (y + y_size * (z + 1)) * x_size + x;
+
+            float pressure_x = block[idx_x] ? pressure[idx] : pressure[idx_x];
+            float pressure_y = block[idx_y] ? pressure[idx] : pressure[idx_y];
+            float pressure_z = block[idx_z] ? pressure[idx] : pressure[idx_z];
+
+            float dp_dx = pressure_x - pressure[idx];
+            float dp_dy = pressure_y - pressure[idx];
+            float dp_dz = pressure_z - pressure[idx];
 
             u[idx] -= dp_dx;
             v[idx] -= dp_dy;
