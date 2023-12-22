@@ -22,11 +22,11 @@ fn main() -> Result<(), DriverError> {
     // fluid.step(dev.clone(), cfg, DT)?;
     // let result = fluid.smoke(dev.clone())?;
 
-    for r in result {
-        if r != 0.0 {
-            print!("{} ", r);
-        }
-    }
+    // for r in result {
+    //     if r != 0.0 {
+    //         print!("{} ", r);
+    //     }
+    // }
 
     // for y in 0..ROWS {
     //     for x in 0..COLS {

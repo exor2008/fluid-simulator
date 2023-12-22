@@ -3,6 +3,8 @@ use crate::Fluid;
 use cudarc::driver::CudaDevice;
 use cudarc::driver::DriverError;
 use gltf::{self, buffer::Data, Document};
+use std::fs::File;
+use std::io::Write;
 use std::sync::Arc;
 
 impl Fluid {
@@ -56,14 +58,18 @@ impl Fluid {
                         let pos2 = Fluid::translate(positions[ind2], origin);
                         let pos3 = Fluid::translate(positions[ind3], origin);
 
-                        let norm = normals[ind1];
+                        // println!("pos {:?} {:?} {:?}", pos1, pos2, pos3);
+
+                        let norm = normals[ind3];
                         let norm = normalize(norm);
 
                         let triangle = Triangle::new(pos1, pos2, pos3);
                         let points = triangle.on_grid();
 
+                        // println!("On grid {:?}", points);
                         for [x, y, z] in points {
                             let idx = (y + y_size * z) * x_size + x;
+                            // println!("xyz {} {} {} {:?} {:?} {:?}", x, y, z, pos1, pos2, pos3);
                             normal_u_host[idx] = norm[0];
                             normal_v_host[idx] = norm[2];
                             normal_w_host[idx] = norm[1];
@@ -74,44 +80,61 @@ impl Fluid {
         }
 
         let mut block;
+        let mut to_block: Vec<usize> = vec![];
+        // let mut file = File::create("output.txt").expect("Unable to create file");
 
         for z in 0..z_size {
             for y in 0..y_size {
                 block = false;
+                to_block.clear();
                 for x in 0..x_size {
                     let idx = (y + y_size * z) * x_size + x;
-                    let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
-                    match normal == 0.0 {
-                        true => block_host[idx] = block,
-                        false => block = !block,
-                    }
-                }
-            }
-        }
+                    // let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
 
-        for z in 0..z_size {
-            for x in 0..x_size {
-                block = false;
-                for y in 0..y_size {
-                    let idx = (y + y_size * z) * x_size + x;
-                    let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
-                    match normal == 0.0 {
-                        true => block_host[idx] = block,
-                        false => block = !block,
-                    }
-                }
-            }
-        }
+                    if normal_u_host[idx] != 0.0
+                        || normal_v_host[idx] != 0.0
+                        || normal_w_host[idx] != 0.0
+                    {
+                        // file.write_all(
+                        //     format!(
+                        //         "NORMAL x: {} y: {} z: {} u: {} v: {} w: {} block: {}\n",
+                        //         x,
+                        //         y,
+                        //         z,
+                        //         normal_u_host[idx],
+                        //         normal_v_host[idx],
+                        //         normal_w_host[idx],
+                        //         block
+                        //     )
+                        //     .as_bytes(),
+                        // )
+                        // .unwrap();
 
-        for x in 0..x_size {
-            for y in 0..y_size {
-                block = false;
-                for z in 0..z_size {
-                    let idx = (y + y_size * z) * x_size + x;
-                    let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
-                    match normal == 0.0 {
-                        true => block_host[idx] = block,
-                        false => block = !block,
+                        match block {
+                            true => {
+                                for idx in to_block.iter() {
+                                    block_host[*idx] = true;
+                                }
+                                // println!("blocked {}", to_block.len());
+                                // file.write_all(
+                                //     format!("    blocked {}\n", to_block.len()).as_bytes(),
+                                // )
+                                // .unwrap();
+
+                                to_block.clear();
+                                block = false;
+                            }
+                            false => {
+                                block = true;
+                            }
+                        }
+                    } else if block {
+                        // file.write_all(
+                        //     format!("        append x: {} y: {} z: {}\n", x, y, z).as_bytes(),
+                        // )
+                        // .unwrap();
+                        // println!("append x: {} y: {} z: {}", x, y, z);
+                        to_block.push(idx);
                     }
                 }
             }
@@ -157,16 +180,16 @@ impl Fluid {
         Ok(fluid)
     }
 
-    fn translate(mut pos: [f32; 3], origin: [f32; 3]) -> [f32; 3] {
-        pos[0] += origin[0];
-        pos[1] += origin[1];
-        pos[2] += origin[2];
+    fn translate(mut pos: [f32; 3], origin: [f32; 3]) -> [i32; 3] {
+        // pos[0] += origin[0];
+        // pos[1] += origin[1];
+        // pos[2] += origin[2];
 
         pos[0] *= 10.0;
         pos[1] *= 10.0;
         pos[2] *= 10.0;
 
-        pos
+        [pos[0] as i32, pos[1] as i32, pos[2] as i32]
     }
 }
 

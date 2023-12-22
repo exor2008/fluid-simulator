@@ -1,65 +1,22 @@
+use nalgebra::Vector3;
 use std::cmp::{max, min};
 
-struct Vec3 {
-    x: i32,
-    y: i32,
-    z: i32,
-}
-
-impl From<[f32; 3]> for Vec3 {
-    fn from(value: [f32; 3]) -> Self {
-        Vec3 {
-            x: value[0] as i32,
-            y: value[2] as i32,
-            z: value[1] as i32,
-        }
-    }
-}
-
 pub struct Triangle {
-    vertices: [Vec3; 3],
+    vertices: [Vector3<i32>; 3],
 }
 
 impl Triangle {
-    pub fn new(a: [f32; 3], b: [f32; 3], c: [f32; 3]) -> Self {
+    pub fn new(a: [i32; 3], b: [i32; 3], c: [i32; 3]) -> Self {
         Triangle {
-            vertices: [Vec3::from(a), Vec3::from(b), Vec3::from(c)],
+            vertices: [Vector3::from(a), Vector3::from(b), Vector3::from(c)],
         }
-    }
-
-    fn barycentric_coords(p: &Vec3, a: &Vec3, b: &Vec3, c: &Vec3) -> (f32, f32, f32) {
-        let v0 = [b.x - a.x, b.y - a.y, b.z - a.z];
-        let v1 = [c.x - a.x, c.y - a.y, c.z - a.z];
-        let v2 = [p.x - a.x, p.y - a.y, p.z - a.z];
-
-        let dot00 = v0[0] * v0[0] + v0[1] * v0[1] + v0[2] * v0[2];
-        let dot01 = v0[0] * v1[0] + v0[1] * v1[1] + v0[2] * v1[2];
-        let dot11 = v1[0] * v1[0] + v1[1] * v1[1] + v1[2] * v1[2];
-        let dot20 = v2[0] * v0[0] + v2[1] * v0[1] + v2[2] * v0[2];
-        let dot21 = v2[0] * v1[0] + v2[1] * v1[1] + v2[2] * v1[2];
-
-        let inv_denom = 1.0 / (dot00 * dot11 - dot01 * dot01) as f32;
-
-        let v = (dot11 * dot20 - dot01 * dot21) as f32 * inv_denom;
-        let w = (dot00 * dot21 - dot01 * dot20) as f32 * inv_denom;
-        let u = 1.0 - v - w;
-
-        (u, v, w)
     }
 
     pub fn on_grid(&self) -> Vec<[usize; 3]> {
         let mut points: Vec<[usize; 3]> = Vec::new();
 
-        let mut min_bound = Vec3 {
-            x: i32::MAX,
-            y: i32::MAX,
-            z: i32::MAX,
-        };
-        let mut max_bound = Vec3 {
-            x: i32::MIN,
-            y: i32::MIN,
-            z: i32::MIN,
-        };
+        let mut min_bound: Vector3<i32> = Vector3::new(i32::MAX, i32::MAX, i32::MAX);
+        let mut max_bound: Vector3<i32> = Vector3::new(i32::MIN, i32::MIN, i32::MIN);
 
         // Find bounding box of the triangle
         for vertex in self.vertices.iter() {
@@ -75,21 +32,59 @@ impl Triangle {
         for z in min_bound.z..=max_bound.z {
             for y in min_bound.y..=max_bound.y {
                 for x in min_bound.x..=max_bound.x {
-                    let point = Vec3 { x, y, z };
-                    let (u, v, w) = Triangle::barycentric_coords(
-                        &point,
-                        &self.vertices[0],
-                        &self.vertices[1],
-                        &self.vertices[2],
-                    );
-
-                    if u >= 0.0 && v >= 0.0 && w >= 0.0 {
-                        points.push([x as usize, y as usize, z as usize])
+                    let point: Vector3<i32> = Vector3::new(x, y, z);
+                    if in_triangle(self.vertices[0], self.vertices[1], self.vertices[2], point) {
+                        points.push([x as usize, z as usize, y as usize])
                     }
                 }
             }
         }
 
         points
+    }
+}
+
+fn same_side(p1: Vector3<i32>, p2: Vector3<i32>, a: Vector3<i32>, b: Vector3<i32>) -> bool {
+    let diff = b - a;
+
+    let cp1 = diff.cross(&(p1 - a));
+    let cp2 = diff.cross(&(p2 - a));
+
+    cp1.dot(&cp2) >= 0
+}
+
+fn in_triangle(a: Vector3<i32>, b: Vector3<i32>, c: Vector3<i32>, p: Vector3<i32>) -> bool {
+    if same_side(p, a, b, c) && same_side(p, b, a, c) && same_side(p, c, a, b) {
+        let vcl = (a - b).cross(&(a - c));
+        (a - p).dot(&vcl).abs() <= 0
+    } else {
+        false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_in_triangle() {
+        // Vector3::cr
+        let p1 = Vector3::new(5, 5, 0);
+        let p2 = Vector3::new(0, 0, 0);
+        let p3 = Vector3::new(0, 1, 0);
+        let p4 = Vector3::new(15, 0, 0);
+        let p5 = Vector3::new(15, 0, 10);
+        let p6 = Vector3::new(5, 0, 10);
+
+        let a = Vector3::new(0, 0, 0);
+        let b = Vector3::new(10, 0, 0);
+        let c = Vector3::new(0, 10, 0);
+
+        assert!(in_triangle(a, b, c, p1));
+        assert!(in_triangle(a, b, c, p2));
+        assert!(in_triangle(a, b, c, p3));
+        assert!(!in_triangle(a, b, c, p4));
+        assert!(!in_triangle(a, b, c, p5));
+        assert!(!in_triangle(a, b, c, p6));
     }
 }

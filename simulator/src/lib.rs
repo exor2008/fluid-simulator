@@ -238,7 +238,7 @@ impl Fluid {
     }
 
     pub fn smoke(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
-        // let result = dev.sync_reclaim(self.block_dev.clone())?;
+        // let mut result = dev.sync_reclaim(self.block_dev.clone())?;
         // let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();
 
         let result = dev.sync_reclaim(self.smoke_dev.clone())?;
@@ -254,7 +254,6 @@ impl Fluid {
         //         }
         //     }
         // }
-
         // for r in result.iter_mut() {
         //     *r += 1.0;
         //     *r /= 2.0;
