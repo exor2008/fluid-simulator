@@ -7,6 +7,13 @@ use std::fs::File;
 use std::io::Write;
 use std::sync::Arc;
 
+enum State {
+    OUT,
+    BORDERIN,
+    BORDEROUT,
+    IN,
+}
+
 impl Fluid {
     pub fn from_gltf(
         dev: Arc<CudaDevice>,
@@ -74,67 +81,51 @@ impl Fluid {
                             normal_v_host[idx] = norm[2];
                             normal_w_host[idx] = norm[1];
                         }
+                        // break;
                     }
                 }
             }
         }
 
-        let mut block;
+        let mut state;
         let mut to_block: Vec<usize> = vec![];
-        // let mut file = File::create("output.txt").expect("Unable to create file");
+        // let mut file = File::create("block.txt").expect("Unable to create file");
 
         for z in 0..z_size {
             for y in 0..y_size {
-                block = false;
                 to_block.clear();
+                state = State::OUT;
+
                 for x in 0..x_size {
                     let idx = (y + y_size * z) * x_size + x;
-                    // let normal = normal_u_host[idx] + normal_v_host[idx] + normal_w_host[idx];
 
                     if normal_u_host[idx] != 0.0
                         || normal_v_host[idx] != 0.0
                         || normal_w_host[idx] != 0.0
                     {
-                        // file.write_all(
-                        //     format!(
-                        //         "NORMAL x: {} y: {} z: {} u: {} v: {} w: {} block: {}\n",
-                        //         x,
-                        //         y,
-                        //         z,
-                        //         normal_u_host[idx],
-                        //         normal_v_host[idx],
-                        //         normal_w_host[idx],
-                        //         block
-                        //     )
-                        //     .as_bytes(),
-                        // )
-                        // .unwrap();
-
-                        match block {
-                            true => {
+                        match state {
+                            State::OUT => state = State::BORDERIN,
+                            State::BORDERIN => {}
+                            State::BORDEROUT => {}
+                            State::IN => {
+                                state = State::BORDEROUT;
                                 for idx in to_block.iter() {
                                     block_host[*idx] = true;
                                 }
-                                // println!("blocked {}", to_block.len());
-                                // file.write_all(
-                                //     format!("    blocked {}\n", to_block.len()).as_bytes(),
-                                // )
-                                // .unwrap();
-
-                                to_block.clear();
-                                block = false;
-                            }
-                            false => {
-                                block = true;
                             }
                         }
-                    } else if block {
-                        // file.write_all(
-                        //     format!("        append x: {} y: {} z: {}\n", x, y, z).as_bytes(),
-                        // )
-                        // .unwrap();
-                        // println!("append x: {} y: {} z: {}", x, y, z);
-                        to_block.push(idx);
+                    } else {
+                        match state {
+                            State::OUT => {}
+                            State::BORDERIN => {
+                                state = State::IN;
+                                to_block.push(idx);
+                            }
+                            State::BORDEROUT => state = State::OUT,
+                            State::IN => {
+                                to_block.push(idx);
+                            }
+                        }
                     }
                 }
             }

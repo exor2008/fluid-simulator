@@ -56,7 +56,7 @@ fn same_side(p1: Vector3<i32>, p2: Vector3<i32>, a: Vector3<i32>, b: Vector3<i32
 fn in_triangle(a: Vector3<i32>, b: Vector3<i32>, c: Vector3<i32>, p: Vector3<i32>) -> bool {
     if same_side(p, a, b, c) && same_side(p, b, a, c) && same_side(p, c, a, b) {
         let vcl = (a - b).cross(&(a - c));
-        (a - p).dot(&vcl).abs() <= 0
+        (a - p).dot(&vcl).abs() <= 300
     } else {
         false
     }

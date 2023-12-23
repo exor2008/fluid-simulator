@@ -445,7 +445,7 @@ extern "C" __global__ void constant(
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (x >= 10 && x < 20 && y >= 35 && y < y_size - 35 && z >= 25 && z < z_size - 25)
+    if (x >= 10 && x < 20 && y >= 45 && y < y_size - 45 && z >= 35 && z < z_size - 35)
     {
         int idx = (y + y_size * z) * x_size + x;
 
