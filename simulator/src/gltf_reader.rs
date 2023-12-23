@@ -3,16 +3,9 @@ use crate::Fluid;
 use cudarc::driver::CudaDevice;
 use cudarc::driver::DriverError;
 use gltf::{self, buffer::Data, Document};
-use std::fs::File;
-use std::io::Write;
 use std::sync::Arc;
 
-enum State {
-    OUT,
-    BORDERIN,
-    BORDEROUT,
-    IN,
-}
+const CELLS_PER_UNIT: f32 = 10.0;
 
 impl Fluid {
     pub fn from_gltf(
@@ -44,8 +37,7 @@ impl Fluid {
         // normal_u_host[(0 + 10 * 80) * 140 + 100] = -1.0;
 
         for node in doc.nodes() {
-            // for mesh in doc.meshes() {
-            let (origin, _rotation, _scale) = node.transform().decomposed();
+            let (_origin, _rotation, _scale) = node.transform().decomposed();
 
             if let Some(mesh) = node.mesh() {
                 for primitive in mesh.primitives() {
@@ -61,9 +53,9 @@ impl Fluid {
                         let ind2 = ind2 as usize;
                         let ind3 = ind3 as usize;
 
-                        let pos1 = Fluid::translate(positions[ind1], origin);
-                        let pos2 = Fluid::translate(positions[ind2], origin);
-                        let pos3 = Fluid::translate(positions[ind3], origin);
+                        let pos1 = Fluid::to_grid_coords(positions[ind1]);
+                        let pos2 = Fluid::to_grid_coords(positions[ind2]);
+                        let pos3 = Fluid::to_grid_coords(positions[ind3]);
 
                         // println!("pos {:?} {:?} {:?}", pos1, pos2, pos3);
 
@@ -87,15 +79,8 @@ impl Fluid {
             }
         }
 
-        let mut state;
-        let mut to_block: Vec<usize> = vec![];
-        // let mut file = File::create("block.txt").expect("Unable to create file");
-
         for z in 0..z_size {
             for y in 0..y_size {
-                to_block.clear();
-                state = State::OUT;
-
                 for x in 0..x_size {
                     let idx = (y + y_size * z) * x_size + x;
 
@@ -103,29 +88,27 @@ impl Fluid {
                         || normal_v_host[idx] != 0.0
                         || normal_w_host[idx] != 0.0
                     {
-                        match state {
-                            State::OUT => state = State::BORDERIN,
-                            State::BORDERIN => {}
-                            State::BORDEROUT => {}
-                            State::IN => {
-                                state = State::BORDEROUT;
-                                for idx in to_block.iter() {
-                                    block_host[*idx] = true;
-                                }
-                            }
-                        }
-                    } else {
-                        match state {
-                            State::OUT => {}
-                            State::BORDERIN => {
-                                state = State::IN;
-                                to_block.push(idx);
-                            }
-                            State::BORDEROUT => state = State::OUT,
-                            State::IN => {
-                                to_block.push(idx);
-                            }
-                        }
+                        let x_shift = (normal_u_host[idx].signum()
+                            * normal_u_host[idx].abs().ceil())
+                            as usize;
+                        let y_shift = (normal_v_host[idx].signum()
+                            * normal_v_host[idx].abs().ceil())
+                            as usize;
+                        let z_shift = (normal_w_host[idx].signum()
+                            * normal_w_host[idx].abs().ceil())
+                            as usize;
+
+                        let x_block = x + x_shift;
+                        let y_block = y + y_shift;
+                        let z_block = z + z_shift;
+
+                        // println!(
+                        //     "{} {} {} -> {} {} {} {} {} {}",
+                        //     x, y, z, x_block, y_block, z_block, x_shift, y_shift, z_shift,
+                        // );
+
+                        let idx_block = (y_block + y_size * z_block) * x_size + x_block;
+                        block_host[idx_block] = true;
                     }
                 }
             }
@@ -171,14 +154,10 @@ impl Fluid {
         Ok(fluid)
     }
 
-    fn translate(mut pos: [f32; 3], origin: [f32; 3]) -> [i32; 3] {
-        // pos[0] += origin[0];
-        // pos[1] += origin[1];
-        // pos[2] += origin[2];
-
-        pos[0] *= 10.0;
-        pos[1] *= 10.0;
-        pos[2] *= 10.0;
+    fn to_grid_coords(mut pos: [f32; 3]) -> [i32; 3] {
+        pos[0] *= CELLS_PER_UNIT;
+        pos[1] *= CELLS_PER_UNIT;
+        pos[2] *= CELLS_PER_UNIT;
 
         [pos[0] as i32, pos[1] as i32, pos[2] as i32]
     }

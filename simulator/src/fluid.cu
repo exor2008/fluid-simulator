@@ -445,7 +445,7 @@ extern "C" __global__ void constant(
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (x >= 10 && x < 20 && y >= 45 && y < y_size - 45 && z >= 35 && z < z_size - 35)
+    if (x >= 10 && x < 20 && y >= 50 && y < 60 && z >= 60 && z < 70)
     {
         int idx = (y + y_size * z) * x_size + x;
 
@@ -455,10 +455,16 @@ extern "C" __global__ void constant(
         }
     }
 
-    if (x >= 2 && x <= 4 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)
+    if (x >= 2 && x <= 8 && y >= 50 && z > 60 && y < 60 && z < 70)
     {
         int idx = (y + y_size * z) * x_size + x;
-        u[idx] = 3.0;
+        u[idx] = 8.0;
+    }
+
+    if (x >= 100 && x < x_size - 1 && y >= 30 && y < 70 && z >= z_size - 15 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        w[idx] = 3.0;
     }
 
     if (x < 2 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)

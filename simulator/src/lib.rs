@@ -241,9 +241,11 @@ impl Fluid {
         // let mut result = dev.sync_reclaim(self.block_dev.clone())?;
         // let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();
 
+        // let result = dev.sync_reclaim(self.normal_w_dev.clone())?;
+
         let result = dev.sync_reclaim(self.smoke_dev.clone())?;
 
-        // let mut result = dev.sync_reclaim(self.u_dev.clone())?;
+        // let mut result = dev.sync_reclaim(self.w_dev.clone())?;
         // let mut r = vec![0f32; self.x_size * self.y_size * self.z_size];
 
         // for z in 0..self.z_size - 1 {
@@ -255,8 +257,8 @@ impl Fluid {
         //     }
         // }
         // for r in result.iter_mut() {
-        //     *r += 1.0;
-        //     *r /= 2.0;
+        //     *r += 3.0;
+        //     *r /= 6.0;
         // }
 
         // let result = dev.sync_reclaim(self.pressure_a_dev.clone())?;

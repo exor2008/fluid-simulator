@@ -10,9 +10,9 @@ use std::vec;
 
 #[macro_use]
 extern crate rocket;
-const X: usize = 140;
+const X: usize = 180;
 const Y: usize = 100;
-const Z: usize = 80;
+const Z: usize = 120;
 const SIZE: usize = X * Y * Z;
 
 #[derive(Serialize)]
@@ -38,7 +38,7 @@ pub fn stream(mut shutdown: Shutdown) -> ByteStream![Vec<u8>] {
     let mut fluid = get_fluid(dev.clone(), X, Y, Z).unwrap();
 
     let cfg = LaunchConfig {
-        grid_dim: (20, 20, 20),
+        grid_dim: (18, 10, 12),
         block_dim: (10, 10, 10),
         shared_mem_bytes: 0,
     };
