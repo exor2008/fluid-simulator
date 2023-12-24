@@ -34,7 +34,7 @@ impl Triangle {
                 for x in min_bound.x..=max_bound.x {
                     let point: Vector3<i32> = Vector3::new(x, y, z);
                     if in_triangle(self.vertices[0], self.vertices[1], self.vertices[2], point) {
-                        points.push([x as usize, z as usize, y as usize])
+                        points.push([x as usize, y as usize, z as usize])
                     }
                 }
             }

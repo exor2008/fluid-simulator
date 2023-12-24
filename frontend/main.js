@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { VolumeRenderShader1 } from "three/addons/shaders/VolumeShader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import WebGL from "three/addons/capabilities/WebGL.js";
 
 if (WebGL.isWebGL2Available() === false) {
@@ -41,6 +42,7 @@ function init() {
   initTexture();
   initMaterial();
   initMesh();
+  initButton();
 
   render();
   window.addEventListener("resize", onWindowResize);
@@ -144,6 +146,51 @@ function initMesh() {
 
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
+}
+
+function initButton() {
+  const button = document.createElement("input");
+  button.type = "file";
+  button.accept = ".gltf, .glb";
+  button.addEventListener("change", handleFileSelect, false);
+  document.body.appendChild(button);
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      const result = event.target.result;
+      loadModel(result);
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function loadModel(dataURL) {
+  const loader = new GLTFLoader();
+  loader.load(
+    dataURL,
+    async function (gltf) {
+      const ambientLight = new THREE.AmbientLight(0x404040); // Ambient light
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Directional light
+      directionalLight.position.set(1, 1, 1).normalize();
+      scene.add(directionalLight);
+
+      gltf.scene.scale.set(10, 10, 10);
+
+      await renderer.compileAsync(gltf.scene, camera, scene);
+      scene.add(gltf.scene);
+    },
+    undefined,
+    function (error) {
+      console.error("Error loading model:", error);
+    }
+  );
 }
 
 function updateUniforms() {
@@ -250,6 +297,7 @@ async function fetchSize() {
       sizeZ = size.z;
 
       init();
+      // loadGLTF();
       streamVoxelData();
     })
     .catch((error) => {
