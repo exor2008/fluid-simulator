@@ -1,6 +1,7 @@
 #![feature(slice_flatten)]
 
-use backend::{get_size, stream};
+use backend::fluid::FluidState;
+use backend::{fluid::Config, init, stream};
 use rocket::fs::FileServer;
 
 #[macro_use]
@@ -10,5 +11,7 @@ extern crate rocket;
 fn rocket() -> _ {
     rocket::build()
         .mount("/", FileServer::from("static/"))
-        .mount("/", routes![stream, get_size])
+        .mount("/", routes![stream, init])
+        .manage(FluidState::default())
+        .manage(Config::default())
 }

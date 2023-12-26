@@ -1,5 +1,5 @@
 use cudarc::driver::*;
-use simulator::{get_device, get_fluid};
+use simulator::{get_device, Fluid};
 
 const X_SIZE: usize = 180;
 const Y_SIZE: usize = 100;
@@ -8,7 +8,13 @@ const DT: f32 = 0.01;
 
 fn main() -> Result<(), DriverError> {
     let dev = get_device(0)?;
-    let mut fluid = get_fluid(dev.clone(), X_SIZE, Y_SIZE, Z_SIZE)?;
+
+    Fluid::init_dev(dev.clone())?;
+
+    let bin = include_bytes!("D:/code/fluid-simulator/scene.glb");
+    let (doc, buffers, _) = gltf::import_slice(bin).unwrap();
+
+    let mut fluid = Fluid::from_gltf(dev.clone(), X_SIZE, Y_SIZE, Z_SIZE, doc, buffers)?;
 
     let cfg = LaunchConfig {
         grid_dim: (18, 10, 12),

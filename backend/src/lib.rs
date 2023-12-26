@@ -1,11 +1,15 @@
+use crate::fluid::{Config, Size};
+use fluid::{FluidState, Input};
+use rocket::form::{Context, Contextual, Form, FromForm, FromFormField};
+use rocket::futures::stream::{Stream, StreamExt};
 use rocket::response::stream::ByteStream;
-use rocket::serde::{json::Json, Serialize};
+use rocket::tokio::io;
 use rocket::tokio::select;
 use rocket::tokio::time::{self, Duration};
 use rocket::Shutdown;
-use simulator::LaunchConfig;
-use simulator::{get_device, get_fluid};
-use std::mem::{self, transmute};
+use rocket::State;
+use simulator::{get_device, gltf, Fluid};
+use std::sync::Arc;
 use std::vec;
 
 #[macro_use]
@@ -15,41 +19,68 @@ const Y: usize = 100;
 const Z: usize = 120;
 const SIZE: usize = X * Y * Z;
 
-#[derive(Serialize)]
-#[serde(crate = "rocket::serde")]
-pub struct Size {
-    x: usize,
-    y: usize,
-    z: usize,
-}
+pub mod fluid;
 
-#[get("/size")]
-pub fn get_size() -> Json<Size> {
-    let size = Size { x: X, y: Y, z: Z };
-    Json(size)
+#[post("/init", data = "<input>")]
+pub async fn init<'a>(
+    input: Form<Input<'a>>,
+    fluid_state: &State<FluidState>,
+    config: &State<Config>,
+) {
+    let size = Size {
+        x: input.x,
+        y: input.y,
+        z: input.z,
+    };
+
+    let mut stream = input.gltf.open().await.unwrap();
+    let mut bin: Vec<u8> = vec![];
+    io::copy(&mut stream, &mut bin).await.unwrap();
+
+    let (doc, buffers, _) = gltf::import_slice(bin).unwrap();
+
+    let dev = get_device(0).unwrap();
+    Fluid::init_dev(dev.clone()).unwrap();
+
+    let mut fluid = fluid_state.fluid.lock().await;
+    *fluid = Fluid::from_gltf(Arc::clone(&dev), size.x, size.y, size.z, doc, buffers).unwrap();
+
+    let mut launch = config.launch.lock().await;
+    *launch = FluidState::get_launch_config();
 }
 
 #[get("/fluid/stream")]
-pub fn stream(mut shutdown: Shutdown) -> ByteStream![Vec<u8>] {
+pub async fn stream<'a>(
+    mut shutdown: Shutdown,
+    fluid_state: &'a State<FluidState>,
+    config: &'a State<Config>,
+) -> ByteStream![Vec<u8> + 'a] {
     let mut interval = time::interval(Duration::from_millis(1));
 
     let dev = get_device(0).unwrap();
-
-    let mut fluid = get_fluid(dev.clone(), X, Y, Z).unwrap();
-
-    let cfg = LaunchConfig {
-        grid_dim: (18, 10, 12),
-        block_dim: (10, 10, 10),
-        shared_mem_bytes: 0,
-    };
+    Fluid::init_dev(dev.clone()).unwrap();
 
     ByteStream! {
         loop {
-            fluid.step(dev.clone(), cfg, 0.01).unwrap();
-            let result = fluid.smoke(dev.clone()).unwrap();
+            let cfg = config.launch.lock().await;
+
+            fluid_state
+                .fluid
+                .lock()
+                .await
+                .step(Arc::clone(&dev), *cfg, 0.01)
+                .unwrap();
+
+            let result = fluid_state
+                .fluid
+                .lock()
+                .await
+                .smoke(Arc::clone(&dev))
+                .unwrap();
+
             select! {
                 _ = interval.tick() => {
-                    let bytes: Vec<u8> = vec_to_bytes(result);
+                    let bytes: Vec<u8> = FluidState::vec_to_bytes(result.clone());
                     yield bytes;
                     interval.tick().await;
                 }
@@ -60,14 +91,4 @@ pub fn stream(mut shutdown: Shutdown) -> ByteStream![Vec<u8>] {
             }
         }
     }
-}
-
-fn vec_to_bytes<T>(vec: Vec<T>) -> Vec<u8> {
-    return unsafe {
-        let float_ptr: *const T = vec.as_ptr();
-        let byte_ptr: *const u8 = transmute(float_ptr);
-        let byte_slice: &[u8] =
-            std::slice::from_raw_parts(byte_ptr, vec.len() * mem::size_of::<T>());
-        byte_slice.to_vec()
-    };
 }

@@ -1,7 +1,9 @@
 #![feature(iter_array_chunks)]
 
 pub use cudarc::{driver::*, nvrtc::compile_ptx};
+pub use gltf;
 use std::{mem::swap, sync::Arc};
+
 pub mod gltf_reader;
 pub mod raster;
 
@@ -265,39 +267,58 @@ impl Fluid {
 
         Ok(result)
     }
+
+    pub fn from_size(
+        dev: Arc<CudaDevice>,
+        x_size: usize,
+        y_size: usize,
+        z_size: usize,
+    ) -> Result<Fluid, DriverError> {
+        Fluid::new(dev.clone(), x_size, y_size, z_size)
+    }
+
+    pub fn init_dev(dev: Arc<CudaDevice>) -> Result<(), DriverError> {
+        const PTX_SRC: &str = include_str!("fluid.cu");
+
+        let ptx = compile_ptx(PTX_SRC).unwrap();
+
+        dev.load_ptx(
+            ptx,
+            "fluid",
+            &[
+                "divergence",
+                "pressure",
+                "incompress",
+                "advect_velocity",
+                "calc_borders",
+                "advect_smoke",
+                "constant",
+            ],
+        )?;
+
+        Ok(())
+    }
+}
+
+impl Default for Fluid {
+    fn default() -> Self {
+        let dev = get_device(0).unwrap();
+        Fluid::init_dev(dev.clone()).unwrap();
+        Fluid::from_size(dev, 3, 3, 3).unwrap()
+    }
 }
 
 pub fn get_device(ordinal: usize) -> Result<Arc<CudaDevice>, DriverError> {
     CudaDevice::new(ordinal)
 }
 
-pub fn get_fluid(
-    dev: Arc<CudaDevice>,
-    x_size: usize,
-    y_size: usize,
-    z_size: usize,
-) -> Result<Fluid, DriverError> {
-    const PTX_SRC: &str = include_str!("fluid.cu");
+pub enum FluidData {
+    Fluid,
+    Pressure,
+}
 
-    let ptx = compile_ptx(PTX_SRC).unwrap();
-
-    dev.load_ptx(
-        ptx,
-        "fluid",
-        &[
-            "divergence",
-            "pressure",
-            "incompress",
-            "advect_velocity",
-            "calc_borders",
-            "advect_smoke",
-            "constant",
-        ],
-    )?;
-
-    // Fluid::new(dev.clone(), x_size, y_size, z_size)
-
-    let bin = include_bytes!("D:/code/fluid-simulator/scene.glb");
-    let (doc, buffers, _) = gltf::import_slice(bin).unwrap();
-    Fluid::from_gltf(dev.clone(), x_size, y_size, z_size, doc, buffers)
+impl Default for FluidData {
+    fn default() -> Self {
+        FluidData::Fluid
+    }
 }

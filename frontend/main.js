@@ -136,6 +136,8 @@ function initMaterial() {
     uniforms: uniforms,
     vertexShader: shader.vertexShader,
     fragmentShader: shader.fragmentShader,
+    depthWrite: true,
+    depthTest: true,
     side: THREE.BackSide, // The volume shader uses the backface as its "reference point"
   });
 }
@@ -288,21 +290,59 @@ async function streamVoxelData() {
   }
 }
 
-async function fetchSize() {
-  fetch("http://127.0.0.1:8000/size")
-    .then((response) => response.json())
-    .then((size) => {
-      sizeX = size.x;
-      sizeY = size.y;
-      sizeZ = size.z;
-
-      init();
-      // loadGLTF();
-      streamVoxelData();
-    })
-    .catch((error) => {
-      console.error("Error:", error);
-    });
+function showModal() {
+  document.getElementById("modal").style.display = "block";
 }
 
-fetchSize();
+function hideModal() {
+  document.getElementById("modal").style.display = "none";
+}
+
+function submitForm() {
+  const x = document.getElementById("x").value;
+  const y = document.getElementById("y").value;
+  const z = document.getElementById("z").value;
+  const fileInput = document.getElementById("file");
+
+  // Assume you have a function to upload the file using XMLHttpRequest
+  uploadInitForm(fileInput.files[0], { x, y, z });
+
+  // Close the modal after submission
+  hideModal();
+}
+
+function uploadInitForm(file, data) {
+  const formData = new FormData();
+  formData.append("gltf", file);
+  formData.append("x", data.x);
+  formData.append("y", data.y);
+  formData.append("z", data.z);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open("POST", "http://127.0.0.1:8000/init", true);
+
+  // Set up event listeners for completion or error
+  xhr.onload = function () {
+    if (xhr.status === 200) {
+      sizeX = data.x;
+      sizeY = data.y;
+      sizeZ = data.z;
+
+      init();
+      streamVoxelData();
+    } else {
+      console.error("File upload failed");
+    }
+  };
+
+  xhr.onerror = function () {
+    console.error("Network error during file upload");
+  };
+
+  // Send the FormData object
+  xhr.send(formData);
+}
+
+document.getElementById("submitBtn").addEventListener("click", submitForm);
+showModal();
+// fetchSize();

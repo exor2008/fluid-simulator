@@ -8,10 +8,37 @@
         body {
             margin: 0;
         }
+        #modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 20px;
+            z-index: 1000; /* Set a high z-index to make it appear above other content */
+        }
     </style>
 </head>
 
 <body>
+    <div id="modal">
+        <label for="x">X:</label>
+        <input type="text" id="x">
+        <br>
+        <label for="y">Y:</label>
+        <input type="text" id="y">
+        <br>
+        <label for="z">Z:</label>
+        <input type="text" id="z">
+        <br>
+        <label for="file">File:</label>
+        <input type="file" id="file">
+        <br>
+        <button id="submitBtn">Submit</button>
+    </div>
+
+    <script src="https://threejs.org/build/three.js"></script>
     <script type="module" src="/main.js"></script>
 </body>
 

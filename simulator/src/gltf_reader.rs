@@ -34,8 +34,6 @@ impl Fluid {
         let mut normal_w_host = vec![0f32; size];
         let mut block_host = vec![false; size];
 
-        // normal_u_host[(0 + 10 * 80) * 140 + 100] = -1.0;
-
         for node in doc.nodes() {
             let (_origin, _rotation, _scale) = node.transform().decomposed();
 
