@@ -32,6 +32,8 @@ function init() {
     renderstyle: "mip",
     isothreshold: 0.15,
     colormap: "viridis",
+    pause: onPauseClick,
+    resume: onResumeClick,
   };
 
   initRenderer();
@@ -100,7 +102,18 @@ function initGui() {
     .add(volconfig, "renderstyle", { mip: "mip", iso: "iso" })
     .onChange(updateUniforms);
   gui.add(volconfig, "isothreshold", 0, 1, 0.01).onChange(updateUniforms);
+  gui.add(volconfig, "pause");
+  gui.add(volconfig, "resume");
 }
+
+function onPauseClick() {
+  fetch("http://127.0.0.1:8000/pause", { method: "POST" });
+}
+
+function onResumeClick() {
+  fetch("http://127.0.0.1:8000/resume", { method: "POST" });
+}
+
 function initVoxelData() {
   voxelData = new Float32Array(sizeX * sizeY * sizeZ);
 }

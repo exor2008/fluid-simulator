@@ -1,7 +1,6 @@
 use crate::fluid::{Config, Size};
 use fluid::{FluidState, Input};
-use rocket::form::{Context, Contextual, Form, FromForm, FromFormField};
-use rocket::futures::stream::{Stream, StreamExt};
+use rocket::form::Form;
 use rocket::response::stream::ByteStream;
 use rocket::tokio::io;
 use rocket::tokio::select;
@@ -62,33 +61,45 @@ pub async fn stream<'a>(
 
     ByteStream! {
         loop {
-            let cfg = config.launch.lock().await;
+            if *config.stream_on.lock().await {
+                let cfg = config.launch.lock().await;
 
-            fluid_state
-                .fluid
-                .lock()
-                .await
-                .step(Arc::clone(&dev), *cfg, 0.01)
-                .unwrap();
+                fluid_state
+                    .fluid
+                    .lock()
+                    .await
+                    .step(Arc::clone(&dev), *cfg, 0.01)
+                    .unwrap();
 
-            let result = fluid_state
-                .fluid
-                .lock()
-                .await
-                .smoke(Arc::clone(&dev))
-                .unwrap();
+                let result = fluid_state
+                    .fluid
+                    .lock()
+                    .await
+                    .smoke(Arc::clone(&dev))
+                    .unwrap();
 
-            select! {
-                _ = interval.tick() => {
-                    let bytes: Vec<u8> = FluidState::vec_to_bytes(result.clone());
-                    yield bytes;
-                    interval.tick().await;
-                }
-                _ = &mut shutdown => {
-                    yield vec![0u8; SIZE];
-                    break;
+                select! {
+                    _ = interval.tick() => {
+                        let bytes: Vec<u8> = FluidState::vec_to_bytes(result.clone());
+                        yield bytes;
+                        interval.tick().await;
+                    }
+                    _ = &mut shutdown => {
+                        yield vec![0u8; SIZE];
+                        break;
+                    }
                 }
             }
         }
     }
+}
+
+#[post("/pause")]
+pub async fn pause<'a>(config: &State<Config>) {
+    *config.stream_on.lock().await = false;
+}
+
+#[post("/resume")]
+pub async fn resume<'a>(config: &State<Config>) {
+    *config.stream_on.lock().await = true;
 }

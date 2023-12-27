@@ -1,11 +1,9 @@
-use rocket::form::{Context, Contextual, Form, FromForm, FromFormField};
+use rocket::form::FromForm;
 use rocket::fs::TempFile;
 use rocket::tokio::sync::Mutex;
 use simulator::FluidData;
-use simulator::{get_device, CudaDevice};
 use simulator::{Fluid, LaunchConfig};
 use std::mem::{self, transmute};
-use std::sync::Arc;
 
 // #[derive(Debug, FromForm, Default)]
 pub struct Size {
@@ -41,7 +39,7 @@ impl Default for Config {
 
         Config {
             data: Default::default(),
-            stream_on: Default::default(),
+            stream_on: Mutex::new(true),
             size: Mutex::new(size),
             launch: Mutex::new(cfg),
         }
