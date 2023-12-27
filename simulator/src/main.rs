@@ -1,5 +1,5 @@
 use cudarc::driver::*;
-use simulator::{get_device, Fluid};
+use simulator::{get_device, Fluid, FluidData};
 
 const X_SIZE: usize = 180;
 const Y_SIZE: usize = 100;
@@ -23,7 +23,7 @@ fn main() -> Result<(), DriverError> {
     };
 
     fluid.step(dev.clone(), cfg, DT)?;
-    let result = fluid.smoke(dev.clone())?;
+    let result = fluid.get_to_draw(dev.clone(), FluidData::Smoke)?;
 
     // fluid.step(dev.clone(), cfg, DT)?;
     // let result = fluid.smoke(dev.clone())?;

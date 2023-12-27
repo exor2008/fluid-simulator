@@ -35,6 +35,7 @@ function init() {
     pause: onPauseClick,
     resume: onResumeClick,
     reset: onResetClick,
+    data: "smoke",
   };
 
   initRenderer();
@@ -106,6 +107,15 @@ function initGui() {
   gui.add(volconfig, "pause");
   gui.add(volconfig, "resume");
   gui.add(volconfig, "reset");
+  gui
+    .add(volconfig, "data", [
+      "smoke",
+      "pressure",
+      "block",
+      "horizontal_speed",
+      "divergence",
+    ])
+    .onChange(swithcData);
 }
 
 function onPauseClick() {
@@ -118,6 +128,11 @@ function onResumeClick() {
 
 function onResetClick() {
   fetch("http://127.0.0.1:8000/reset", { method: "POST" });
+}
+
+function swithcData() {
+  const url = `http://127.0.0.1:8000/switch/${volconfig.data}`;
+  fetch(url, { method: "POST" });
 }
 
 function initVoxelData() {

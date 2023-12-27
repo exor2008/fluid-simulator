@@ -1,12 +1,14 @@
 use crate::fluid::{Config, Size};
 use fluid::{FluidState, Input};
 use rocket::form::Form;
+use rocket::http::Status;
 use rocket::response::stream::ByteStream;
 use rocket::tokio::io;
 use rocket::tokio::select;
 use rocket::tokio::time::{self, Duration};
 use rocket::Shutdown;
 use rocket::State;
+use simulator::FluidData;
 use simulator::{get_device, gltf, Fluid};
 use std::sync::Arc;
 use std::vec;
@@ -63,6 +65,7 @@ pub async fn stream<'a>(
         loop {
             if *config.stream_on.lock().await {
                 let cfg = config.launch.lock().await;
+                let to_draw = config.data.lock().await;
 
                 fluid_state
                     .fluid
@@ -75,7 +78,7 @@ pub async fn stream<'a>(
                     .fluid
                     .lock()
                     .await
-                    .smoke(Arc::clone(&dev))
+                    .get_to_draw(Arc::clone(&dev), *to_draw)
                     .unwrap();
 
                 select! {
@@ -111,4 +114,18 @@ pub async fn reset<'a>(fluid_state: &State<FluidState>) {
 
     let mut fluid = fluid_state.fluid.lock().await;
     fluid.reset(dev).unwrap();
+}
+
+#[post("/switch/<data>")]
+pub async fn switch<'a>(data: &str, config: &State<Config>) -> Status {
+    *config.data.lock().await = match data {
+        "smoke" => FluidData::Smoke,
+        "pressure" => FluidData::Pressure,
+        "block" => FluidData::Block,
+        "horizontal_speed" => FluidData::HorizontalSpeed,
+        "divergence" => FluidData::Divergence,
+        &_ => return Status::NotFound,
+    };
+
+    Status::Ok
 }

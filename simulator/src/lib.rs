@@ -255,32 +255,52 @@ impl Fluid {
         Ok(())
     }
 
-    pub fn smoke(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
-        // let mut result = dev.sync_reclaim(self.block_dev.clone())?;
-        // let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();
+    pub fn get_to_draw(
+        &self,
+        dev: Arc<CudaDevice>,
+        to_draw: FluidData,
+    ) -> Result<Vec<f32>, DriverError> {
+        let result = match to_draw {
+            FluidData::Smoke => self.get_smoke(dev),
+            FluidData::Pressure => self.get_pressure(dev),
+            FluidData::Block => self.get_block(dev),
+            FluidData::HorizontalSpeed => self.get_horizontal_speed(dev),
+            FluidData::Divergence => self.get_divergence(dev),
+        };
 
-        // let result = dev.sync_reclaim(self.normal_w_dev.clone())?;
+        result
+    }
 
+    fn get_smoke(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
         let result = dev.sync_reclaim(self.smoke_dev.clone())?;
+        Ok(result)
+    }
 
-        // let mut result = dev.sync_reclaim(self.w_dev.clone())?;
-        // let mut r = vec![0f32; self.x_size * self.y_size * self.z_size];
+    fn get_pressure(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
+        let result = dev.sync_reclaim(self.pressure_a_dev.clone())?;
 
-        // for z in 0..self.z_size - 1 {
-        //     for y in 0..self.y_size - 1 {
-        //         for x in 0..self.x_size - 1 {
-        //             let idx = (y + self.y_size * z) * self.x_size + x;
-        //             r[idx] = result[idx + 1] - result[idx];
-        //         }
-        //     }
-        // }
-        // for r in result.iter_mut() {
-        //     *r += 3.0;
-        //     *r /= 6.0;
-        // }
+        Ok(result)
+    }
 
-        // let result = dev.sync_reclaim(self.pressure_a_dev.clone())?;
+    fn get_divergence(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
+        let mut result = dev.sync_reclaim(self.div_dev.clone())?;
 
+        for r in result.iter_mut() {
+            *r += 1.0;
+            *r /= 2.0;
+        }
+
+        Ok(result)
+    }
+
+    fn get_block(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
+        let result = dev.sync_reclaim(self.block_dev.clone())?;
+        let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();
+        Ok(result)
+    }
+
+    fn get_horizontal_speed(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
+        let result = dev.sync_reclaim(self.u_dev.clone())?;
         Ok(result)
     }
 
@@ -328,13 +348,17 @@ pub fn get_device(ordinal: usize) -> Result<Arc<CudaDevice>, DriverError> {
     CudaDevice::new(ordinal)
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum FluidData {
-    Fluid,
+    Smoke,
     Pressure,
+    Block,
+    HorizontalSpeed,
+    Divergence,
 }
 
 impl Default for FluidData {
     fn default() -> Self {
-        FluidData::Fluid
+        FluidData::Smoke
     }
 }
