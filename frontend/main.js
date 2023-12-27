@@ -34,6 +34,7 @@ function init() {
     colormap: "viridis",
     pause: onPauseClick,
     resume: onResumeClick,
+    reset: onResetClick,
   };
 
   initRenderer();
@@ -104,6 +105,7 @@ function initGui() {
   gui.add(volconfig, "isothreshold", 0, 1, 0.01).onChange(updateUniforms);
   gui.add(volconfig, "pause");
   gui.add(volconfig, "resume");
+  gui.add(volconfig, "reset");
 }
 
 function onPauseClick() {
@@ -112,6 +114,10 @@ function onPauseClick() {
 
 function onResumeClick() {
   fetch("http://127.0.0.1:8000/resume", { method: "POST" });
+}
+
+function onResetClick() {
+  fetch("http://127.0.0.1:8000/reset", { method: "POST" });
 }
 
 function initVoxelData() {

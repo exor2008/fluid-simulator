@@ -239,6 +239,22 @@ impl Fluid {
         Ok(())
     }
 
+    pub fn reset(&mut self, dev: Arc<CudaDevice>) -> Result<(), DriverError> {
+        let size = self.x_size * self.y_size * self.z_size;
+
+        let u_host = vec![0f32; size];
+        let v_host = vec![0f32; size];
+        let w_host = vec![0f32; size];
+        let smoke_host = vec![0f32; size];
+
+        self.u_dev = dev.htod_copy(u_host)?;
+        self.v_dev = dev.htod_copy(v_host)?;
+        self.w_dev = dev.htod_copy(w_host)?;
+        self.smoke_dev = dev.htod_copy(smoke_host)?;
+
+        Ok(())
+    }
+
     pub fn smoke(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
         // let mut result = dev.sync_reclaim(self.block_dev.clone())?;
         // let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();

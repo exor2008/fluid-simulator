@@ -103,3 +103,12 @@ pub async fn pause<'a>(config: &State<Config>) {
 pub async fn resume<'a>(config: &State<Config>) {
     *config.stream_on.lock().await = true;
 }
+
+#[post("/reset")]
+pub async fn reset<'a>(fluid_state: &State<FluidState>) {
+    let dev = get_device(0).unwrap();
+    Fluid::init_dev(dev.clone()).unwrap();
+
+    let mut fluid = fluid_state.fluid.lock().await;
+    fluid.reset(dev).unwrap();
+}
