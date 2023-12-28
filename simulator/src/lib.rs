@@ -250,11 +250,15 @@ impl Fluid {
         let v_host = vec![0f32; size];
         let w_host = vec![0f32; size];
         let smoke_host = vec![0f32; size];
+        let pressure_a_host = vec![0f32; size];
+        let pressure_b_host = vec![0f32; size];
 
         self.u_dev = dev.htod_copy(u_host)?;
         self.v_dev = dev.htod_copy(v_host)?;
         self.w_dev = dev.htod_copy(w_host)?;
         self.smoke_dev = dev.htod_copy(smoke_host)?;
+        self.pressure_a_dev = dev.htod_copy(pressure_a_host)?;
+        self.pressure_b_dev = dev.htod_copy(pressure_b_host)?;
 
         Ok(())
     }

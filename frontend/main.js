@@ -299,6 +299,8 @@ async function streamVoxelData() {
       let chunk = new Uint8Array(chunkSize);
 
       while (totalBytesRead < chunkSize) {
+        console.log("while 1"); // workaround. block execution otherwise
+        setTimeout(function () {}, 0); // workaround. block execution otherwise
         let { done, value } = await reader.read();
 
         if (done) {
@@ -308,35 +310,32 @@ async function streamVoxelData() {
         if (value.byteLength + totalBytesRead < chunkSize) {
           chunk.set(value, totalBytesRead);
           totalBytesRead += value.byteLength;
-          continue;
-        }
-
-        if (value.byteLength + totalBytesRead == chunkSize) {
+        } else if (value.byteLength + totalBytesRead == chunkSize) {
           chunk.set(value, totalBytesRead);
           voxelData = new Float32Array(chunk.buffer);
           requestAnimationFrame(animate);
           break;
-        }
-
-        while (value.byteLength + totalBytesRead > chunkSize) {
-          let toSend;
-          if (totalBytesRead > 0) {
-            toSend = value.subarray(0, chunkSize - totalBytesRead);
-            value = value.subarray(
-              chunkSize - totalBytesRead,
-              value.byteLength
-            );
-            chunk.set(toSend, totalBytesRead);
-            totalBytesRead = 0;
-          } else {
-            toSend = value.subarray(0, chunkSize);
-            value = value.subarray(chunkSize, value.byteLength);
-            chunk.set(toSend, 0);
+        } else {
+          while (value.byteLength + totalBytesRead > chunkSize) {
+            let toSend;
+            if (totalBytesRead > 0) {
+              toSend = value.subarray(0, chunkSize - totalBytesRead);
+              value = value.subarray(
+                chunkSize - totalBytesRead,
+                value.byteLength
+              );
+              chunk.set(toSend, totalBytesRead);
+              totalBytesRead = 0;
+            } else {
+              toSend = value.subarray(0, chunkSize);
+              value = value.subarray(chunkSize, value.byteLength);
+              chunk.set(toSend, 0);
+            }
+            voxelData = new Float32Array(chunk.buffer);
+            requestAnimationFrame(animate);
           }
-          voxelData = new Float32Array(chunk.buffer);
-          requestAnimationFrame(animate);
+          totalBytesRead = value.byteLength;
         }
-        totalBytesRead = value.byteLength;
       }
     }
   } catch (error) {
