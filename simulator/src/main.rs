@@ -23,7 +23,7 @@ fn main() -> Result<(), DriverError> {
     };
 
     fluid.step(dev.clone(), cfg, DT)?;
-    let result = fluid.get_to_draw(dev.clone(), FluidData::Smoke)?;
+    let result = fluid.get_to_draw(dev.clone(), FluidData::Smoke, cfg)?;
 
     // fluid.step(dev.clone(), cfg, DT)?;
     // let result = fluid.smoke(dev.clone())?;

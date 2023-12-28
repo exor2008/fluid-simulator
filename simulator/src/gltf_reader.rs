@@ -29,6 +29,7 @@ impl Fluid {
         let div_host = vec![0f32; size];
         let pressure_a_host = vec![0f32; size];
         let pressure_b_host = vec![0f32; size];
+        let out_host = vec![0f32; size];
         let mut normal_u_host = vec![0f32; size];
         let mut normal_v_host = vec![0f32; size];
         let mut normal_w_host = vec![0f32; size];
@@ -126,6 +127,7 @@ impl Fluid {
         let normal_u_dev = dev.htod_copy(normal_u_host)?;
         let normal_v_dev = dev.htod_copy(normal_v_host)?;
         let normal_w_dev = dev.htod_copy(normal_w_host)?;
+        let out_dev = dev.htod_copy(out_host)?;
         let block_dev = dev.htod_copy(block_host)?;
 
         let fluid = Fluid {
@@ -144,6 +146,7 @@ impl Fluid {
             normal_v_dev,
             normal_w_dev,
             block_dev,
+            out_dev,
             x_size,
             y_size,
             z_size,

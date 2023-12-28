@@ -25,6 +25,7 @@ pub struct Fluid {
     normal_v_dev: CudaSlice<f32>,
     normal_w_dev: CudaSlice<f32>,
     block_dev: CudaSlice<bool>,
+    out_dev: CudaSlice<f32>,
     x_size: usize,
     y_size: usize,
     z_size: usize,
@@ -54,6 +55,7 @@ impl Fluid {
         let normal_v_host = vec![0f32; size];
         let normal_w_host = vec![0f32; size];
         let block_host = vec![false; size];
+        let out_host = vec![0f32; size];
 
         let u_dev = dev.htod_copy(u_host)?;
         let v_dev = dev.htod_copy(v_host)?;
@@ -70,6 +72,7 @@ impl Fluid {
         let normal_v_dev = dev.htod_copy(normal_v_host)?;
         let normal_w_dev = dev.htod_copy(normal_w_host)?;
         let block_dev = dev.htod_copy(block_host)?;
+        let out_dev = dev.htod_copy(out_host)?;
 
         let fluid = Fluid {
             u_dev,
@@ -87,6 +90,7 @@ impl Fluid {
             normal_v_dev,
             normal_w_dev,
             block_dev,
+            out_dev,
             x_size,
             y_size,
             z_size,
@@ -256,16 +260,17 @@ impl Fluid {
     }
 
     pub fn get_to_draw(
-        &self,
+        &mut self,
         dev: Arc<CudaDevice>,
         to_draw: FluidData,
+        cfg: LaunchConfig,
     ) -> Result<Vec<f32>, DriverError> {
         let result = match to_draw {
             FluidData::Smoke => self.get_smoke(dev),
             FluidData::Pressure => self.get_pressure(dev),
-            FluidData::Block => self.get_block(dev),
-            FluidData::HorizontalSpeed => self.get_horizontal_speed(dev),
-            FluidData::Divergence => self.get_divergence(dev),
+            FluidData::Block => self.get_block(dev, cfg),
+            FluidData::Speed => self.get_speed(dev, cfg),
+            FluidData::SpeedSmoke => self.get_speed_and_smoke(dev, cfg),
         };
 
         result
@@ -282,25 +287,79 @@ impl Fluid {
         Ok(result)
     }
 
-    fn get_divergence(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
-        let mut result = dev.sync_reclaim(self.div_dev.clone())?;
+    fn get_block(
+        &mut self,
+        dev: Arc<CudaDevice>,
+        cfg: LaunchConfig,
+    ) -> Result<Vec<f32>, DriverError> {
+        let bool_to_float = dev.get_func("fluid", "bool_to_float").unwrap();
 
-        for r in result.iter_mut() {
-            *r += 1.0;
-            *r /= 2.0;
+        unsafe {
+            bool_to_float.launch(
+                cfg,
+                (
+                    &self.block_dev,
+                    &mut self.out_dev,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
+                ),
+            )?;
         }
+        let result = dev.sync_reclaim(self.out_dev.clone())?;
+        Ok(result)
+    }
+
+    fn get_speed(
+        &mut self,
+        dev: Arc<CudaDevice>,
+        cfg: LaunchConfig,
+    ) -> Result<Vec<f32>, DriverError> {
+        let magnitude = dev.get_func("fluid", "magnitude").unwrap();
+
+        unsafe {
+            magnitude.launch(
+                cfg,
+                (
+                    &self.u_dev,
+                    &self.v_dev,
+                    &self.w_dev,
+                    &mut self.out_dev,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
+                ),
+            )?;
+        }
+        let result = dev.sync_reclaim(self.out_dev.clone())?;
 
         Ok(result)
     }
 
-    fn get_block(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
-        let result = dev.sync_reclaim(self.block_dev.clone())?;
-        let result = result.iter().map(|v| if *v { 1.0 } else { 0.0 }).collect();
-        Ok(result)
-    }
+    fn get_speed_and_smoke(
+        &mut self,
+        dev: Arc<CudaDevice>,
+        cfg: LaunchConfig,
+    ) -> Result<Vec<f32>, DriverError> {
+        let magnitude_mask = dev.get_func("fluid", "magnitude_mask").unwrap();
 
-    fn get_horizontal_speed(&self, dev: Arc<CudaDevice>) -> Result<Vec<f32>, DriverError> {
-        let result = dev.sync_reclaim(self.u_dev.clone())?;
+        unsafe {
+            magnitude_mask.launch(
+                cfg,
+                (
+                    &self.u_dev,
+                    &self.v_dev,
+                    &self.w_dev,
+                    &mut self.out_dev,
+                    &self.smoke_dev,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
+                ),
+            )?;
+        }
+        let result = dev.sync_reclaim(self.out_dev.clone())?;
+
         Ok(result)
     }
 
@@ -329,6 +388,9 @@ impl Fluid {
                 "calc_borders",
                 "advect_smoke",
                 "constant",
+                "magnitude",
+                "magnitude_mask",
+                "bool_to_float",
             ],
         )?;
 
@@ -353,8 +415,8 @@ pub enum FluidData {
     Smoke,
     Pressure,
     Block,
-    HorizontalSpeed,
-    Divergence,
+    Speed,
+    SpeedSmoke,
 }
 
 impl Default for FluidData {

@@ -78,7 +78,7 @@ pub async fn stream<'a>(
                     .fluid
                     .lock()
                     .await
-                    .get_to_draw(Arc::clone(&dev), *to_draw)
+                    .get_to_draw(Arc::clone(&dev), *to_draw, *cfg)
                     .unwrap();
 
                 select! {
@@ -122,8 +122,8 @@ pub async fn switch<'a>(data: &str, config: &State<Config>) -> Status {
         "smoke" => FluidData::Smoke,
         "pressure" => FluidData::Pressure,
         "block" => FluidData::Block,
-        "horizontal_speed" => FluidData::HorizontalSpeed,
-        "divergence" => FluidData::Divergence,
+        "speed" => FluidData::Speed,
+        "speed_smoke" => FluidData::SpeedSmoke,
         &_ => return Status::NotFound,
     };
 

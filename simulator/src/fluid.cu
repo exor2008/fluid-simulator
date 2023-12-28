@@ -455,11 +455,16 @@ extern "C" __global__ void constant(
         }
     }
 
-    if (x >= 2 && x <= 8 && y >= 50 && z > 60 && y < 60 && z < 70)
-    {
-        int idx = (y + y_size * z) * x_size + x;
-        u[idx] = 8.0;
-    }
+    // if (x >= x_size - 10 && x <= x_size - 2 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)
+    // {
+    //     int idx = (y + y_size * z) * x_size + x;
+    //     u[idx] = 8.0;
+    // }
+    // if (x >= 2 && x <= 8 && y >= 50 && z > 60 && y < 60 && z < 70)
+    // {
+    //     int idx = (y + y_size * z) * x_size + x;
+    //     u[idx] = 8.0;
+    // }
 
     if (x >= 100 && x < x_size - 1 && y >= 30 && y < 70 && z >= z_size - 15 && z < z_size - 1)
     {
@@ -481,5 +486,79 @@ extern "C" __global__ void constant(
     {
         int idx = (y + y_size * z) * x_size + x;
         w[idx] = 0;
+    }
+}
+
+extern "C" __global__ void magnitude(
+    const float *u,
+    const float *v,
+    const float *w,
+    float *mag,
+    int x_size,
+    int y_size,
+    int z_size)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
+
+    if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        mag[idx] = sqrtf(u[idx] * u[idx] + v[idx] * v[idx] + w[idx] * w[idx]);
+    }
+}
+
+extern "C" __global__ void magnitude_mask(
+    const float *u,
+    const float *v,
+    const float *w,
+    float *mag,
+    const float *mask,
+    int x_size,
+    int y_size,
+    int z_size)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
+
+    if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        if (mask[idx] > 0.0)
+        {
+            int idx = (y + y_size * z) * x_size + x;
+            mag[idx] = sqrtf(u[idx] * u[idx] + v[idx] * v[idx] + w[idx] * w[idx]);
+        }
+        else
+        {
+            mag[idx] = 0.0;
+        }
+    }
+}
+
+extern "C" __global__ void bool_to_float(
+    const bool *in,
+    float *out,
+    int x_size,
+    int y_size,
+    int z_size)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
+
+    if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        if (in[idx])
+        {
+            out[idx] = 1.0;
+        }
+        else
+        {
+            out[idx] = 0.0;
+        }
     }
 }

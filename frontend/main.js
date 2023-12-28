@@ -96,10 +96,23 @@ function initCameraControl() {
 
 function initGui() {
   const gui = new GUI();
-  gui.add(volconfig, "clim1", 0, 1, 0.01).onChange(updateUniforms);
-  gui.add(volconfig, "clim2", 0, 1, 0.01).onChange(updateUniforms);
+  gui.add(volconfig, "clim1", 0.0, 10.0, 0.01).onChange(updateUniforms);
+  gui.add(volconfig, "clim2", 0.0, 10.0, 0.01).onChange(updateUniforms);
   gui
-    .add(volconfig, "colormap", { gray: "gray", viridis: "viridis" })
+    .add(volconfig, "colormap", [
+      "viridis",
+      "hot",
+      "gray",
+      "blues",
+      "cividis",
+      "cool",
+      "copper",
+      "inferno",
+      "plasma",
+      "seismic",
+      "winter",
+      "ylgn",
+    ])
     .onChange(updateUniforms);
   gui
     .add(volconfig, "renderstyle", { mip: "mip", iso: "iso" })
@@ -113,8 +126,8 @@ function initGui() {
       "smoke",
       "pressure",
       "block",
-      "horizontal_speed",
-      "divergence",
+      "speed",
+      "speed_smoke",
     ])
     .onChange(swithcData);
   gui.add(volconfig, "gltf_visible", true).onChange(gltfVisibleSwitch);
@@ -157,7 +170,17 @@ function initTexture() {
 function initMaterial() {
   cmtextures = {
     viridis: new THREE.TextureLoader().load("cm_viridis.png", render),
+    hot: new THREE.TextureLoader().load("cm_hot.png", render),
     gray: new THREE.TextureLoader().load("cm_gray.png", render),
+    blues: new THREE.TextureLoader().load("cm_blues.png", render),
+    cividis: new THREE.TextureLoader().load("cm_cividis.png", render),
+    cool: new THREE.TextureLoader().load("cm_cool.png", render),
+    copper: new THREE.TextureLoader().load("cm_copper.png", render),
+    inferno: new THREE.TextureLoader().load("cm_inferno.png", render),
+    plasma: new THREE.TextureLoader().load("cm_plasma.png", render),
+    seismic: new THREE.TextureLoader().load("cm_seismic.png", render),
+    winter: new THREE.TextureLoader().load("cm_winter.png", render),
+    ylgn: new THREE.TextureLoader().load("cm_ylgn.png", render),
   };
 
   // Material
