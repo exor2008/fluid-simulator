@@ -21,7 +21,8 @@ let renderer,
   texture,
   sizeX,
   sizeY,
-  sizeZ;
+  sizeZ,
+  gltfObj;
 
 function init() {
   scene = new THREE.Scene();
@@ -36,6 +37,7 @@ function init() {
     resume: onResumeClick,
     reset: onResetClick,
     data: "smoke",
+    gltf_visible: true,
   };
 
   initRenderer();
@@ -46,7 +48,6 @@ function init() {
   initTexture();
   initMaterial();
   initMesh();
-  initButton();
 
   render();
   window.addEventListener("resize", onWindowResize);
@@ -116,6 +117,7 @@ function initGui() {
       "divergence",
     ])
     .onChange(swithcData);
+  gui.add(volconfig, "gltf_visible", true).onChange(gltfVisibleSwitch);
 }
 
 function onPauseClick() {
@@ -133,6 +135,10 @@ function onResetClick() {
 function swithcData() {
   const url = `http://127.0.0.1:8000/switch/${volconfig.data}`;
   fetch(url, { method: "POST" });
+}
+
+function gltfVisibleSwitch() {
+  gltfObj.scene.visible = volconfig.gltf_visible;
 }
 
 function initVoxelData() {
@@ -184,25 +190,14 @@ function initMesh() {
   scene.add(mesh);
 }
 
-function initButton() {
-  const button = document.createElement("input");
-  button.type = "file";
-  button.accept = ".gltf, .glb";
-  button.addEventListener("change", handleFileSelect, false);
-  document.body.appendChild(button);
-}
-
-function handleFileSelect(event) {
-  const file = event.target.files[0];
-
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      const result = event.target.result;
-      loadModel(result);
-    };
-    reader.readAsDataURL(file);
-  }
+function initGltf(file) {
+  // Read and show gltf model
+  const reader = new FileReader();
+  reader.onload = function (event) {
+    const result = event.target.result;
+    loadModel(result);
+  };
+  reader.readAsDataURL(file);
 }
 
 function loadModel(dataURL) {
@@ -221,6 +216,8 @@ function loadModel(dataURL) {
 
       await renderer.compileAsync(gltf.scene, camera, scene);
       scene.add(gltf.scene);
+      gltfObj = gltf;
+      gltfObj.scene.visible = true;
     },
     undefined,
     function (error) {
@@ -363,6 +360,8 @@ function uploadInitForm(file, data) {
       sizeZ = data.z;
 
       init();
+      initGltf(file);
+
       streamVoxelData();
     } else {
       console.error("File upload failed");

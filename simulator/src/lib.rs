@@ -7,7 +7,7 @@ use std::{mem::swap, sync::Arc};
 pub mod gltf_reader;
 pub mod raster;
 
-const ITERATIONS: usize = 100;
+const ITERATIONS: usize = 80;
 
 pub struct Fluid {
     u_dev: CudaSlice<f32>,
