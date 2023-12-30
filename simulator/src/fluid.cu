@@ -435,7 +435,11 @@ extern "C" __global__ void constant(
     float *u,
     float *v,
     float *w,
+    const float *u_init,
+    const float *v_init,
+    const float *w_init,
     float *smoke,
+    const float *smoke_init,
     const bool *block,
     int x_size,
     int y_size,
@@ -445,31 +449,41 @@ extern "C" __global__ void constant(
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (x >= 10 && x < 20 && y >= 50 && y < 60 && z >= 60 && z < 70)
+    float smoke_scalar;
+    float u_scalar;
+    float v_scalar;
+    float w_scalar;
+
+    if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
     {
         int idx = (y + y_size * z) * x_size + x;
 
         if (!block[idx])
         {
-            smoke[idx] = 1.0;
+            smoke_scalar = smoke_init[idx];
+            if (smoke_scalar > 0.0)
+            {
+                smoke[idx] = smoke_scalar;
+            }
+
+            u_scalar = u_init[idx];
+            if (abs(u_scalar) > 1e-3)
+            {
+                u[idx] = u_scalar;
+            }
+
+            v_scalar = v_init[idx];
+            if (abs(v_scalar) > 1e-3)
+            {
+                v[idx] = v_scalar;
+            }
+
+            w_scalar = w_init[idx];
+            if (abs(w_scalar) > 1e-3)
+            {
+                w[idx] = w_scalar;
+            }
         }
-    }
-
-    // if (x >= x_size - 10 && x <= x_size - 2 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)
-    // {
-    //     int idx = (y + y_size * z) * x_size + x;
-    //     u[idx] = 8.0;
-    // }
-    // if (x >= 2 && x <= 8 && y >= 50 && z > 60 && y < 60 && z < 70)
-    // {
-    //     int idx = (y + y_size * z) * x_size + x;
-    //     u[idx] = 8.0;
-    // }
-
-    if (x >= 100 && x < x_size - 1 && y >= 30 && y < 70 && z >= z_size - 15 && z < z_size - 1)
-    {
-        int idx = (y + y_size * z) * x_size + x;
-        w[idx] = 3.0;
     }
 
     if (x < 2 && y > 0 && z > 0 && y < y_size - 1 && z < z_size - 1)
@@ -529,7 +543,7 @@ extern "C" __global__ void magnitude_mask(
         if (mask[idx] > 0.0)
         {
             int idx = (y + y_size * z) * x_size + x;
-            mag[idx] = sqrtf(u[idx] * u[idx] + v[idx] * v[idx] + w[idx] * w[idx]);
+            mag[idx] = sqrtf(u[idx] * u[idx] + v[idx] * v[idx] + w[idx] * w[idx]) * mask[idx];
         }
         else
         {

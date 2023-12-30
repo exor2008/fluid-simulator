@@ -13,11 +13,15 @@ pub struct Fluid {
     u_dev: CudaSlice<f32>,
     v_dev: CudaSlice<f32>,
     w_dev: CudaSlice<f32>,
+    u_init_dev: CudaSlice<f32>,
+    v_init_dev: CudaSlice<f32>,
+    w_init_dev: CudaSlice<f32>,
     new_u_dev: CudaSlice<f32>,
     new_v_dev: CudaSlice<f32>,
     new_w_dev: CudaSlice<f32>,
     smoke_dev: CudaSlice<f32>,
     new_smoke_dev: CudaSlice<f32>,
+    smoke_init_dev: CudaSlice<f32>,
     div_dev: CudaSlice<f32>,
     pressure_a_dev: CudaSlice<f32>,
     pressure_b_dev: CudaSlice<f32>,
@@ -43,11 +47,15 @@ impl Fluid {
         let u_host = vec![0f32; size];
         let v_host = vec![0f32; size];
         let w_host = vec![0f32; size];
+        let u_init_host = vec![0f32; size];
+        let v_init_host = vec![0f32; size];
+        let w_init_host = vec![0f32; size];
         let new_u_host = vec![0f32; size];
         let new_v_host = vec![0f32; size];
         let new_w_host = vec![0f32; size];
         let smoke_host = vec![0f32; size];
         let new_smoke_host = vec![0f32; size];
+        let smoke_init_host = vec![0f32; size];
         let div_host = vec![0f32; size];
         let pressure_a_host = vec![0f32; size];
         let pressure_b_host = vec![0f32; size];
@@ -60,11 +68,15 @@ impl Fluid {
         let u_dev = dev.htod_copy(u_host)?;
         let v_dev = dev.htod_copy(v_host)?;
         let w_dev = dev.htod_copy(w_host)?;
+        let u_init_dev = dev.htod_copy(u_init_host)?;
+        let v_init_dev = dev.htod_copy(v_init_host)?;
+        let w_init_dev = dev.htod_copy(w_init_host)?;
         let new_u_dev = dev.htod_copy(new_u_host)?;
         let new_v_dev = dev.htod_copy(new_v_host)?;
         let new_w_dev = dev.htod_copy(new_w_host)?;
         let smoke_dev = dev.htod_copy(smoke_host)?;
         let new_smoke_dev = dev.htod_copy(new_smoke_host)?;
+        let smoke_init_dev = dev.htod_copy(smoke_init_host)?;
         let div_dev = dev.htod_copy(div_host)?;
         let pressure_a_dev = dev.htod_copy(pressure_a_host)?;
         let pressure_b_dev = dev.htod_copy(pressure_b_host)?;
@@ -78,11 +90,15 @@ impl Fluid {
             u_dev,
             v_dev,
             w_dev,
+            u_init_dev,
+            v_init_dev,
+            w_init_dev,
             new_u_dev,
             new_v_dev,
             new_w_dev,
             smoke_dev,
             new_smoke_dev,
+            smoke_init_dev,
             div_dev,
             pressure_a_dev,
             pressure_b_dev,
@@ -106,7 +122,7 @@ impl Fluid {
         dt: f32,
     ) -> Result<(), DriverError> {
         unsafe {
-            // Constant power
+            // Constant powers
             let constant = dev.get_func("fluid", "constant").unwrap();
             constant.launch(
                 cfg,
@@ -114,7 +130,11 @@ impl Fluid {
                     &mut self.u_dev,
                     &mut self.v_dev,
                     &mut self.w_dev,
+                    &self.u_init_dev,
+                    &self.v_init_dev,
+                    &self.w_init_dev,
                     &mut self.smoke_dev,
+                    &self.smoke_init_dev,
                     &self.block_dev,
                     self.x_size,
                     self.y_size,

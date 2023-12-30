@@ -11,7 +11,7 @@ fn main() -> Result<(), DriverError> {
 
     Fluid::init_dev(dev.clone())?;
 
-    let bin = include_bytes!("D:/code/fluid-simulator/scene.glb");
+    let bin = include_bytes!("D:/code/fluid-simulator/scene_empty.glb");
     let (doc, buffers, _) = gltf::import_slice(bin).unwrap();
 
     let mut fluid = Fluid::from_gltf(dev.clone(), X_SIZE, Y_SIZE, Z_SIZE, doc, buffers)?;
@@ -23,7 +23,13 @@ fn main() -> Result<(), DriverError> {
     };
 
     fluid.step(dev.clone(), cfg, DT)?;
-    let result = fluid.get_to_draw(dev.clone(), FluidData::Smoke, cfg)?;
+    let result = fluid.get_to_draw(dev.clone(), FluidData::Speed, cfg)?;
+
+    // for r in result {
+    //     if r.abs() > 0.6 {
+    //         println!("{}", r);
+    //     }
+    // }
 
     // fluid.step(dev.clone(), cfg, DT)?;
     // let result = fluid.smoke(dev.clone())?;
