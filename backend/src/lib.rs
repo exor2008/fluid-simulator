@@ -10,6 +10,7 @@ use rocket::Shutdown;
 use rocket::State;
 use simulator::FluidData;
 use simulator::{get_device, gltf, Fluid};
+use std::sync::atomic::Ordering::Relaxed;
 use std::sync::Arc;
 use std::vec;
 
@@ -57,7 +58,6 @@ pub async fn stream<'a>(
     config: &'a State<Config>,
 ) -> ByteStream![Vec<u8> + 'a] {
     let mut interval = time::interval(Duration::from_millis(1));
-
     let dev = get_device(0).unwrap();
     Fluid::init_dev(dev.clone()).unwrap();
 
@@ -67,11 +67,12 @@ pub async fn stream<'a>(
                 let cfg = config.launch.lock().await;
                 let to_draw = config.data.lock().await;
 
+                let gravity = config.gravity.load(Relaxed);
                 fluid_state
                     .fluid
                     .lock()
                     .await
-                    .step(Arc::clone(&dev), *cfg, 0.01)
+                    .step(Arc::clone(&dev), *cfg, 0.01, gravity)
                     .unwrap();
 
                 let result = fluid_state
@@ -128,4 +129,9 @@ pub async fn switch<'a>(data: &str, config: &State<Config>) -> Status {
     };
 
     Status::Ok
+}
+
+#[post("/gravity/<value>")]
+pub fn gravity<'a>(value: f32, config: &State<Config>) {
+    config.gravity.store(value, Relaxed);
 }

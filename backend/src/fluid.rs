@@ -1,3 +1,4 @@
+use atomic_float::AtomicF32;
 use rocket::form::FromForm;
 use rocket::fs::TempFile;
 use rocket::tokio::sync::Mutex;
@@ -5,6 +6,7 @@ use simulator::FluidData;
 use simulator::{Fluid, LaunchConfig};
 use std::mem::{self, transmute};
 
+const GRAVITY: f32 = -0.01;
 // #[derive(Debug, FromForm, Default)]
 pub struct Size {
     pub x: usize,
@@ -25,6 +27,7 @@ pub struct Config {
     pub stream_on: Mutex<bool>,
     pub size: Mutex<Size>,
     pub launch: Mutex<LaunchConfig>,
+    pub gravity: AtomicF32,
 }
 
 impl Default for Config {
@@ -42,6 +45,7 @@ impl Default for Config {
             stream_on: Mutex::new(true),
             size: Mutex::new(size),
             launch: Mutex::new(cfg),
+            gravity: AtomicF32::new(GRAVITY),
         }
     }
 }

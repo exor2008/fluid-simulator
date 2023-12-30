@@ -22,7 +22,7 @@ fn main() -> Result<(), DriverError> {
         shared_mem_bytes: 0,
     };
 
-    fluid.step(dev.clone(), cfg, DT)?;
+    fluid.step(dev.clone(), cfg, DT, -0.01)?;
     let result = fluid.get_to_draw(dev.clone(), FluidData::Speed, cfg)?;
 
     // for r in result {

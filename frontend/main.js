@@ -38,6 +38,7 @@ function init() {
     reset: onResetClick,
     data: "smoke",
     gltf_visible: true,
+    gravity: -0.01,
   };
 
   initRenderer();
@@ -131,6 +132,7 @@ function initGui() {
     ])
     .onChange(swithcData);
   gui.add(volconfig, "gltf_visible", true).onChange(gltfVisibleSwitch);
+  gui.add(volconfig, "gravity", -1.0, 1.0, 0.01).onChange(updateGravity);
 }
 
 function onPauseClick() {
@@ -147,6 +149,11 @@ function onResetClick() {
 
 function swithcData() {
   const url = `http://127.0.0.1:8000/switch/${volconfig.data}`;
+  fetch(url, { method: "POST" });
+}
+
+function updateGravity() {
+  const url = `http://127.0.0.1:8000/gravity/${volconfig.gravity}`;
   fetch(url, { method: "POST" });
 }
 

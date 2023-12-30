@@ -576,3 +576,21 @@ extern "C" __global__ void bool_to_float(
         }
     }
 }
+
+extern "C" __global__ void gravity(
+    float *field,
+    float gravity,
+    int x_size,
+    int y_size,
+    int z_size)
+{
+    int x = blockIdx.x * blockDim.x + threadIdx.x;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
+    int z = blockIdx.z * blockDim.z + threadIdx.z;
+
+    if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
+    {
+        int idx = (y + y_size * z) * x_size + x;
+        field[idx] += gravity;
+    }
+}
