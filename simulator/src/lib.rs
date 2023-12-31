@@ -7,8 +7,7 @@ use std::{mem::swap, sync::Arc};
 pub mod gltf_reader;
 pub mod raster;
 
-const ITERATIONS: usize = 80;
-const GRAVITY: f32 = -0.01;
+const ITERATIONS: usize = 40;
 
 pub struct Fluid {
     u_dev: CudaSlice<f32>,
@@ -121,7 +120,7 @@ impl Fluid {
         dev: Arc<CudaDevice>,
         cfg: LaunchConfig,
         dt: f32,
-        gravity: f32,
+        _gravity: f32,
     ) -> Result<(), DriverError> {
         unsafe {
             // Constant powers
@@ -146,18 +145,18 @@ impl Fluid {
             dev.synchronize()?;
 
             // Gravity
-            let gravity_f = dev.get_func("fluid", "gravity").unwrap();
-            gravity_f.launch(
-                cfg,
-                (
-                    &mut self.w_dev,
-                    gravity,
-                    self.x_size,
-                    self.y_size,
-                    self.z_size,
-                ),
-            )?;
-            dev.synchronize()?;
+            // let gravity_f = dev.get_func("fluid", "gravity").unwrap();
+            // gravity_f.launch(
+            //     cfg,
+            //     (
+            //         &mut self.w_dev,
+            //         gravity,
+            //         self.x_size,
+            //         self.y_size,
+            //         self.z_size,
+            //     ),
+            // )?;
+            // dev.synchronize()?;
 
             // Divergence
             let divergence = dev.get_func("fluid", "divergence").unwrap();

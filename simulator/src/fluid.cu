@@ -588,7 +588,7 @@ extern "C" __global__ void gravity(
     int y = blockIdx.y * blockDim.y + threadIdx.y;
     int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-    if (x > 0 && y > 0 && z > 0 && x < x_size - 1 && y < y_size - 1 && z < z_size - 1)
+    if (x > 0 && y > 0 && x < x_size - 1 && y < y_size - 1 && z >= 3 && z < 6)
     {
         int idx = (y + y_size * z) * x_size + x;
         field[idx] += gravity;

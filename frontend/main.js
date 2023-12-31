@@ -71,12 +71,12 @@ function initCamera() {
     h / 2,
     -h / 2,
     1,
-    5000
+    2000
   );
 
   // camera.zoom = 3;
   camera.up.set(0, 0, 1); // In our data, z is up
-  camera.position.set(0, 0, 100);
+  camera.position.set(300, 0, 50);
 
   // camera.top -= 65;
   // camera.bottom -= 65;
@@ -88,7 +88,7 @@ function initCameraControl() {
   // Create controls
   controls = new OrbitControls(camera, renderer.domElement);
   controls.addEventListener("change", render);
-  controls.target.set(0, 0, 0);
+  controls.target.set(100, 100, 50);
   controls.minZoom = 0.5;
   controls.maxZoom = 6;
   controls.enablePan = true;
@@ -235,11 +235,12 @@ function loadModel(dataURL) {
   loader.load(
     dataURL,
     async function (gltf) {
-      const ambientLight = new THREE.AmbientLight(0x404040); // Ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff); // Ambient light
       scene.add(ambientLight);
 
       const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // Directional light
-      directionalLight.position.set(1, 1, 1).normalize();
+      directionalLight.position.set(300, 0, 50).normalize();
+      directionalLight.lookAt(100, 100, 50);
       scene.add(directionalLight);
 
       gltf.scene.scale.set(10, 10, 10);

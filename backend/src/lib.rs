@@ -48,7 +48,7 @@ pub async fn init<'a>(
     *fluid = Fluid::from_gltf(Arc::clone(&dev), size.x, size.y, size.z, doc, buffers).unwrap();
 
     let mut launch = config.launch.lock().await;
-    *launch = FluidState::get_launch_config();
+    *launch = FluidState::get_launch_config(size);
 }
 
 #[get("/fluid/stream")]

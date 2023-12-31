@@ -49,7 +49,7 @@ impl Fluid {
                 for primitive in mesh.primitives() {
                     let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
                     let (inner, outer, normals) =
-                        Fluid::gltf_to_grid::<'_, '_, Buffer<'_>>(reader, x_size, y_size);
+                        Fluid::gltf_to_grid::<'_, '_, Buffer<'_>>(reader, x_size, y_size, z_size);
 
                     if let Some(name) = node.name() {
                         match name {
@@ -92,7 +92,7 @@ impl Fluid {
                             }
 
                             // Regular geometry
-                            _ => {
+                            name => {
                                 for (idx, norm) in outer.iter().zip(normals) {
                                     normal_u_host[*idx] = norm[0];
                                     normal_v_host[*idx] = norm[2];
@@ -162,6 +162,7 @@ impl Fluid {
         reader: Reader<'a, 's, impl Fn(Buffer<'a>) -> Option<&'s [u8]> + Clone>,
         x_size: usize,
         y_size: usize,
+        z_size: usize,
     ) -> (Vec<usize>, Vec<usize>, Vec<[f32; 3]>) {
         let positions: Vec<[f32; 3]> = reader.read_positions().unwrap().collect();
         let normals: Vec<[f32; 3]> = reader.read_normals().unwrap().collect();
@@ -178,6 +179,13 @@ impl Fluid {
             let pos1 = Fluid::to_grid_coords(positions[ind1]);
             let pos2 = Fluid::to_grid_coords(positions[ind2]);
             let pos3 = Fluid::to_grid_coords(positions[ind3]);
+
+            if !Fluid::in_bounds(pos1, x_size, y_size, z_size)
+                || !Fluid::in_bounds(pos2, x_size, y_size, z_size)
+                || !Fluid::in_bounds(pos3, x_size, y_size, z_size)
+            {
+                continue;
+            }
 
             let norm = normals[ind3];
             let norm = normalize(norm);
@@ -203,6 +211,15 @@ impl Fluid {
             }
         }
         (inner, outer, normals_out)
+    }
+
+    fn in_bounds(coord: [i32; 3], x_size: usize, y_size: usize, z_size: usize) -> bool {
+        let [x, y, z] = coord;
+        if x < 0 || y < 0 || z < 0 {
+            false
+        } else {
+            x < x_size as i32 - 1 && y < y_size as i32 - 1 && z < z_size as i32 - 1
+        }
     }
 
     fn to_grid_coords(mut pos: [f32; 3]) -> [i32; 3] {

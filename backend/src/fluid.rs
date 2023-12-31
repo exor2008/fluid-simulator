@@ -66,9 +66,13 @@ impl FluidState {
         };
     }
 
-    pub fn get_launch_config() -> LaunchConfig {
+    pub fn get_launch_config(size: Size) -> LaunchConfig {
         LaunchConfig {
-            grid_dim: (18, 10, 12),
+            grid_dim: (
+                (size.x / 10 + 1) as u32,
+                (size.y / 10 + 1) as u32,
+                (size.z / 10 + 1) as u32,
+            ),
             block_dim: (10, 10, 10),
             shared_mem_bytes: 0,
         }
