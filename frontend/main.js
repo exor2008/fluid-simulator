@@ -60,6 +60,8 @@ function initRenderer() {
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+
+  renderer.getContext().enable(renderer.getContext().DEPTH_TEST);
 }
 
 function initCamera() {
@@ -172,6 +174,7 @@ function initTexture() {
   texture.minFilter = texture.magFilter = THREE.LinearFilter;
   texture.unpackAlignment = 1;
   texture.needsUpdate = true;
+  texture.depthTest = true;
 }
 
 function initMaterial() {
@@ -247,8 +250,6 @@ function loadModel(dataURL) {
 
       await renderer.compileAsync(gltf.scene, camera, scene);
       scene.add(gltf.scene);
-      gltfObj = gltf;
-      gltfObj.scene.visible = true;
     },
     undefined,
     function (error) {

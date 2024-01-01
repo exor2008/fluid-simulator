@@ -92,7 +92,7 @@ impl Fluid {
                             }
 
                             // Regular geometry
-                            name => {
+                            _name => {
                                 for (idx, norm) in outer.iter().zip(normals) {
                                     normal_u_host[*idx] = norm[0];
                                     normal_v_host[*idx] = norm[2];
