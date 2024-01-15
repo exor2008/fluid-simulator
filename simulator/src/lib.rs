@@ -310,6 +310,7 @@ impl Fluid {
             FluidData::Block => self.get_block(dev, cfg),
             FluidData::Speed => self.get_speed(dev, cfg),
             FluidData::SpeedSmoke => self.get_speed_and_smoke(dev, cfg),
+            FluidData::SmokeBlock => self.get_smoke_and_block(dev, cfg),
         };
 
         result
@@ -402,6 +403,31 @@ impl Fluid {
         Ok(result)
     }
 
+    fn get_smoke_and_block(
+        &mut self,
+        dev: Arc<CudaDevice>,
+        cfg: LaunchConfig,
+    ) -> Result<Vec<f32>, DriverError> {
+        let bool_to_float_plus_float = dev.get_func("fluid", "bool_to_float_plus_float").unwrap();
+
+        unsafe {
+            bool_to_float_plus_float.launch(
+                cfg,
+                (
+                    &self.block_dev,
+                    &self.smoke_dev,
+                    &mut self.out_dev,
+                    self.x_size,
+                    self.y_size,
+                    self.z_size,
+                ),
+            )?;
+        }
+        let result = dev.sync_reclaim(self.out_dev.clone())?;
+
+        Ok(result)
+    }
+
     pub fn from_size(
         dev: Arc<CudaDevice>,
         x_size: usize,
@@ -430,6 +456,7 @@ impl Fluid {
                 "magnitude",
                 "magnitude_mask",
                 "bool_to_float",
+                "bool_to_float_plus_float",
                 "gravity",
             ],
         )?;
@@ -457,6 +484,7 @@ pub enum FluidData {
     Block,
     Speed,
     SpeedSmoke,
+    SmokeBlock,
 }
 
 impl Default for FluidData {

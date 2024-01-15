@@ -99,17 +99,17 @@ pub async fn stream<'a>(
 }
 
 #[post("/pause")]
-pub async fn pause<'a>(config: &State<Config>) {
+pub async fn pause(config: &State<Config>) {
     *config.stream_on.lock().await = false;
 }
 
 #[post("/resume")]
-pub async fn resume<'a>(config: &State<Config>) {
+pub async fn resume(config: &State<Config>) {
     *config.stream_on.lock().await = true;
 }
 
 #[post("/reset")]
-pub async fn reset<'a>(fluid_state: &State<FluidState>) {
+pub async fn reset(fluid_state: &State<FluidState>) {
     let dev = get_device(0).unwrap();
     Fluid::init_dev(dev.clone()).unwrap();
 
@@ -118,13 +118,14 @@ pub async fn reset<'a>(fluid_state: &State<FluidState>) {
 }
 
 #[post("/switch/<data>")]
-pub async fn switch<'a>(data: &str, config: &State<Config>) -> Status {
+pub async fn switch(data: &str, config: &State<Config>) -> Status {
     *config.data.lock().await = match data {
         "smoke" => FluidData::Smoke,
         "pressure" => FluidData::Pressure,
         "block" => FluidData::Block,
         "speed" => FluidData::Speed,
         "speed_smoke" => FluidData::SpeedSmoke,
+        "smoke_block" => FluidData::SmokeBlock,
         &_ => return Status::NotFound,
     };
 
@@ -132,6 +133,6 @@ pub async fn switch<'a>(data: &str, config: &State<Config>) -> Status {
 }
 
 #[post("/gravity/<value>")]
-pub fn gravity<'a>(value: f32, config: &State<Config>) {
+pub fn gravity(value: f32, config: &State<Config>) {
     config.gravity.store(value, Relaxed);
 }

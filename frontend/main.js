@@ -38,7 +38,6 @@ function init() {
     reset: onResetClick,
     data: "smoke",
     gltf_visible: true,
-    gravity: -0.01,
   };
 
   initRenderer();
@@ -131,10 +130,10 @@ function initGui() {
       "block",
       "speed",
       "speed_smoke",
+      "smoke_block",
     ])
     .onChange(swithcData);
   gui.add(volconfig, "gltf_visible", true).onChange(gltfVisibleSwitch);
-  gui.add(volconfig, "gravity", -1.0, 1.0, 0.01).onChange(updateGravity);
 }
 
 function onPauseClick() {
@@ -250,6 +249,7 @@ function loadModel(dataURL) {
 
       await renderer.compileAsync(gltf.scene, camera, scene);
       scene.add(gltf.scene);
+      gltfObj = gltf;
     },
     undefined,
     function (error) {
