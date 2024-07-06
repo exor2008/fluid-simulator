@@ -23,7 +23,7 @@ fn main() -> Result<(), DriverError> {
     };
 
     fluid.step(dev.clone(), cfg, DT, -0.01)?;
-    let result = fluid.get_to_draw(dev.clone(), FluidData::SmokeBlock, cfg)?;
+    let _result = fluid.get_to_draw(dev.clone(), FluidData::SmokeBlock, cfg)?;
 
     // for r in result {
     //     if r.abs() > 0.6 {
